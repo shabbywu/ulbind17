@@ -15,7 +15,9 @@ template <typename T, typename... Args> struct PrivateDataHolder : public Privat
     PrivateDataHolder(T *ptr) : data(std::shared_ptr<T>(ptr)) {};
 
     virtual ~PrivateDataHolder() {
+        #ifdef TRACE_CONTAINER_GC
         std::cout << "~PrivateDataHolder" << typeid(T).name() << std::endl;
+        #endif
         if (free_data != nullptr) {
             free_data(this);
         }

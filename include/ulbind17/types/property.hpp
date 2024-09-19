@@ -61,7 +61,6 @@ class BoundProperty : public Value<JSObjectRef> {
   public:
     BoundProperty(const BoundProperty &) = delete;
     BoundProperty &operator=(const BoundProperty &other) {
-        std::cout << "in 1" << std::endl;
         if (this->holder != other.holder) {
             assign(other.value());
         } else if ((this->mode == Mode::PropertyName && this->propertyName != other.propertyName) ||
