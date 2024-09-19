@@ -15,7 +15,7 @@ namespace ulbind17 {
 class StdoutLogger : public ultralight::Logger {
 
   public:
-    virtual void LogMessage(LogLevel log_level, const String &message) {
+    virtual void LogMessage(ultralight::LogLevel log_level, const ultralight::String &message) {
         std::cout << message.utf8().data() << std::endl;
     }
 
