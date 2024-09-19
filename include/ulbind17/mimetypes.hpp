@@ -23,7 +23,7 @@
 #endif
 
 namespace ulbind17 {
-namespace minetypes {
+namespace mimetypes {
 static constexpr const char *unknown = "application/unknown";
 
 static constexpr frozen::unordered_map<frozen::string, const char *, 347> knownns = {
@@ -391,5 +391,5 @@ const char *getType(const char *extension) {
         return unknown;
     return it->second;
 }
-} // namespace minetypes
+} // namespace mimetypes
 } // namespace ulbind17
