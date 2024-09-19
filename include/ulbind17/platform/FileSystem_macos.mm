@@ -54,7 +54,7 @@ class FileSystem : public ultralight::FileSystem {
 
     virtual ultralight::String GetFileMimeType(const ultralight::String &file_path) override {
         std::filesystem::path path = file_path.utf8().data();
-        std::string mimetype = minetypes::getType(path.extension().string().c_str());
+        std::string mimetype = mimetypes::getType(path.extension().string().c_str());
         return ultralight::String8(mimetype.c_str(), mimetype.length());
     }
 
