@@ -4,19 +4,9 @@ cmake_minimum_required(VERSION 3.3.2)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(ULTRALIGHT_INCLUDE_DIR "${SDK_ROOT}/include")
 set(ULTRALIGHT_BINARY_DIR "${SDK_ROOT}/bin")
-set(ULTRALIGHT_INSPECTOR_DIR "${SDK_ROOT}/inspector")
-set(ULTRALIGHT_RESOURCES_DIR "${SDK_ROOT}/resources")
-
-if(CMAKE_SYSTEM_NAME MATCHES "Windows")
-  set(ULTRALIGHT_LIBRARY_DIR "${SDK_ROOT}/lib")
-else()
-  set(ULTRALIGHT_LIBRARY_DIR "${SDK_ROOT}/bin")
-endif()
 
 target_link_directories(ulbind17 INTERFACE ${ULTRALIGHT_LIBRARY_DIR})
-target_include_directories(ulbind17 INTERFACE ${ULTRALIGHT_INCLUDE_DIR})
 
 if(PORT MATCHES "UltralightMac")
   set(CMAKE_SKIP_BUILD_RPATH FALSE)
