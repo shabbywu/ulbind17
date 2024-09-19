@@ -4,6 +4,8 @@
 #include <map>
 #include <windows.h>
 
+#include <ulbind17/mimetypes.hpp>
+
 namespace ulbind17 {
 namespace platform {
 /**
@@ -25,31 +27,6 @@ class FileSystem : public ultralight::FileSystem {
         delete buffer_data;
     }
 
-    std::wstring GetMimeType(const std::wstring &szExtension) {
-        // return mime type for extension
-        HKEY hKey = NULL;
-        std::wstring szResult = L"application/unknown";
-
-        // open registry key
-        if (RegOpenKeyExW(HKEY_CLASSES_ROOT, szExtension.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-            // define buffer
-            wchar_t szBuffer[256] = {0};
-            DWORD dwBuffSize = sizeof(szBuffer);
-
-            // get content type
-            if (RegQueryValueExW(hKey, L"Content Type", NULL, NULL, (LPBYTE)szBuffer, &dwBuffSize) == ERROR_SUCCESS) {
-                // success
-                szResult = szBuffer;
-            }
-
-            // close key
-            RegCloseKey(hKey);
-        }
-
-        // return result
-        return szResult;
-    }
-
   public:
     FileSystem(std::filesystem::path rootdir) : rootdir(rootdir) {};
     virtual ~FileSystem() {};
@@ -60,8 +37,8 @@ class FileSystem : public ultralight::FileSystem {
 
     virtual ultralight::String GetFileMimeType(const ultralight::String &file_path) override {
         std::filesystem::path path = file_path.utf8().data();
-        std::wstring mimetype = GetMimeType(path.extension());
-        return ultralight::String16(mimetype.c_str(), mimetype.length());
+        std::string mimetype = minetypes::getType(path.extension().string().c_str());
+        return ultralight::String8(mimetype.c_str(), mimetype.length());
     }
 
     virtual ultralight::String GetFileCharset(const ultralight::String &file_path) override {
