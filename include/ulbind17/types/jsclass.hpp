@@ -18,18 +18,6 @@ class ClassBase {
     virtual JSObjectRef makeInstance(JSContextRef ctx, void *instance) = 0;
     virtual void initializeInstance(JSContextRef ctx, JSObjectRef object) = 0;
     virtual void finalizeInstance(JSObjectRef object) = 0;
-
-    static void FinalizeExPrivateDataHolder(JSClassRef jsClass, JSObjectRef object) {
-        auto cp = (PrivateDataHolder<ClassBase> *)JSClassGetPrivate(jsClass);
-        auto op = (PrivateDataHolderFinalizer *)JSObjectGetPrivate(object);
-
-        if (cp) {
-            // cp->data->
-        }
-        if (op) {
-            delete op;
-        }
-    }
 };
 
 template <typename C> class Class : public ClassBase {
