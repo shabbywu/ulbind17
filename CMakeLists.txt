@@ -16,19 +16,16 @@ else()
   set(ULTRALIGHT_LIBRARY_DIR "${SDK_ROOT}/bin")
 endif()
 
-include_directories("${ULBINDING_INCLUDE_DIR}" "${SDK_ROOT}/include"
-                    ${CMAKE_CURRENT_LIST_DIR}/embedded)
-
 option(ENABLE_TEST "enable test?" FALSE)
 
 add_library(ulbind17_header INTERFACE)
 target_link_directories(ulbind17_header INTERFACE ${EXTRA_LIBRARY_DIR}
-                        ${ULTRALIGHT_LIBRARY_DIR})
+  ${ULTRALIGHT_LIBRARY_DIR})
 target_include_directories(
   ulbind17_header INTERFACE ${ULBINDING_INCLUDE_DIR} ${EXTRA_INCLUDE_DIR}
-                            ${SDK_ROOT}/include)
+  ${SDK_ROOT}/include ${CMAKE_CURRENT_LIST_DIR}/embedded)
 target_link_libraries(ulbind17_header INTERFACE UltralightCore Ultralight
-                                                WebCore)
+  WebCore)
 add_library(ulbind17::header ALIAS ulbind17_header)
 
 add_subdirectory(embedded)
