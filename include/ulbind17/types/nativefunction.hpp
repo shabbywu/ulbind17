@@ -8,11 +8,8 @@
 
 namespace ulbind17 {
 namespace detail {
-template <typename T> class NativeFunction;
-
-template <class Return, class... Args> class NativeFunction<Return(Args...)> {
+template <typename T> class NativeFunction {
   protected:
-    using Holder = Holder<JSObjectRef>;
     static JSClassDefinition make_class_def(std::shared_ptr<generic_function> func) {
         JSClassDefinition def;
         memset(&def, 0, sizeof(def));
@@ -39,7 +36,11 @@ template <class Return, class... Args> class NativeFunction<Return(Args...)> {
         auto instance = JSObjectMake(ctx, clazz, new PrivateDataHolder<generic_function>(func));
         return instance;
     }
+};
 
+template <class Return, class... Args> class NativeFunction<Return(Args...)> {
+  protected:
+    using Holder = Holder<JSObjectRef>;
     std::shared_ptr<Holder> holder;
 
   public:
