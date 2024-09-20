@@ -7,3 +7,7 @@ add_library(
   ulbind17/resources/icudt67l.cpp
   ulbind17/resources/icudt67l.h
   ulbind17/setup.hpp)
+
+if(NOT WIN32)
+  target_compile_options(embedded_resources PUBLIC -fPIC)
+endif()
