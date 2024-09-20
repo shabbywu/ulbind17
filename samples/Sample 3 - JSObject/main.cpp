@@ -34,7 +34,8 @@ void Sample3() {
     object.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
     window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
 
-    std::cout << "test: " << std::is_same_v<std::decay_t<const int>, int> << std::endl;
+    std::cout << "Object.size: " << object.size() << std::endl;
+    assert(object.size() == 7);
 
     ulbind17::detail::Script script(ctx->ctx(), R"(
         logInfo("" + object)

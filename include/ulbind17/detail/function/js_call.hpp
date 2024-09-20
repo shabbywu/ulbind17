@@ -9,7 +9,7 @@ inline void js_call_setup_args(JSContextRef ctx, JSValueRef *arguments) {
 
 template <class Arg, class... Args>
 inline void js_call_setup_args(JSContextRef ctx, JSValueRef *arguments, Arg &&head, Args... tail) {
-    arguments[0] = generic_cast(ctx, std::forward<Arg>(head));
+    arguments[0] = generic_cast<Arg, JSValueRef>(ctx, std::forward<Arg>(head));
     js_call_setup_args(ctx, arguments + 1, tail...);
 }
 

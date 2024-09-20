@@ -26,6 +26,15 @@ class Object : public Value<JSObjectRef> {
         return Object(ctx, JSContextGetGlobalObject(ctx));
     }
 
+#pragma region js api
+  public:
+    virtual inline unsigned int size() const;
+
+    virtual inline unsigned int length() const;
+
+    inline std::string toString() const;
+#pragma endregion
+
   public:
     inline BoundProperty operator[](std::string propertyName) const;
 
