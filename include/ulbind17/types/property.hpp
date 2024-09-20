@@ -44,17 +44,16 @@ class BoundProperty : public Value<JSObjectRef> {
         }
     }
 
-    template <typename Value = JSValueRef>
-    void assign(Value &&v, JSPropertyAttributes attributes = kJSPropertyAttributeNone) {
+    template <typename V = JSValueRef> void assign(V &&v, JSPropertyAttributes attributes = kJSPropertyAttributeNone) {
         if (mode == Mode::PropertyName) {
             auto object = holder->ToObjectRef();
             auto propertyName =
                 generic_cast<std::string, JSStringRef>(holder->ctx, std::forward<std::string>(this->propertyName));
-            auto value = generic_cast<Value, JSValueRef>(holder->ctx, std::forward<Value>(v));
+            auto value = generic_cast<V, JSValueRef>(holder->ctx, std::forward<V>(v));
             JSObjectSetProperty(holder->ctx, object, propertyName, value, attributes, nullptr);
         } else {
             auto object = holder->ToObjectRef();
-            auto value = generic_cast<Value, JSValueRef>(holder->ctx, std::forward<Value>(v));
+            auto value = generic_cast<V, JSValueRef>(holder->ctx, std::forward<V>(v));
             JSObjectSetPropertyAtIndex(holder->ctx, object, this->propertyIndex, value, nullptr);
         }
     }
