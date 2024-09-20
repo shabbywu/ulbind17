@@ -30,12 +30,17 @@ void Sample3() {
     object[2] = 2.2;
     object.set(4, ulbind17::detail::Undefined(ctx->ctx()));
     object.set(5, nullptr);
-    object["6"] = true;
+    object["六"] = true;
     object.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
     window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
 
     std::cout << "Object.size: " << object.size() << std::endl;
     assert(object.size() == 7);
+    std::cout << "keys: ";
+    for (auto k : object.keys()) {
+        std::cout << k << " ";
+    }
+    std::cout << "\n";
 
     ulbind17::detail::Script script(ctx->ctx(), R"(
         logInfo("" + object)
@@ -45,7 +50,7 @@ void Sample3() {
     )");
     script.Evaluate<void>();
     assert(object.get<int>(0) == 0);
-    assert(object.get<bool>("6"));
+    assert(object.get<bool>("六"));
     std::cout << "object[0]: " << object.get<int>("0") << std::endl;
 }
 

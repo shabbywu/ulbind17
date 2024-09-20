@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ulbind17/types/jsarray.hpp"
+#include "ulbind17/types/jsarray__def.hpp"
 
 namespace ulbind17 {
 namespace detail {
