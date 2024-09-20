@@ -17,7 +17,7 @@ class Array : public Object {
     Array(JSContextRef ctx) : Object(ctx, make_empty_object(ctx)) {};
 
   public:
-    nullptr_t value() const {
+    std::nullptr_t value() const {
         return nullptr;
     }
 

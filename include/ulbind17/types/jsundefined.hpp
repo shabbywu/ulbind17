@@ -17,7 +17,7 @@ class Undefined : public Value<> {
     Undefined(JSContextRef ctx) : Value(ctx, make_undefined(ctx)) {};
 
   public:
-    nullptr_t value() const {
+    std::nullptr_t value() const {
         return nullptr;
     }
 

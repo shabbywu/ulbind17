@@ -3,6 +3,7 @@
 #include "ulbind17/detail/malloc.hpp"
 #include "ulbind17/types/jsstring.hpp"
 #include "ulbind17/types/nativefunction.hpp"
+#include "ulbind17/types/jsnull.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <map>
 #include <memory>
@@ -21,7 +22,7 @@ class ClassBase {
 
 template <typename C> class Class : public ClassBase {
   protected:
-    using Holder = Holder<JSClassRef>;
+    using Holder = JSHolder<JSClassRef>;
     // getter = JSValueRef(this, ctx, exception*)
     using PropertyGetter = JSValueRef(C *, JSContextRef, JSValueRef *);
     // setter = bool(this, ctx, value, exception*)
@@ -48,7 +49,7 @@ template <typename C> class Class : public ClassBase {
 
     virtual void end(JSClassDefinition &def) {
         if (defined) {
-            throw std::exception("class is defined");
+            throw "class is defined";
         }
         defined = true;
         holder->value = JSClassCreate(&def);
@@ -118,7 +119,8 @@ template <typename C> class Class : public ClassBase {
         return *this;
     }
 
-    template <typename C, typename P> void defProperty(std::string propertyName, P C::*pm) {
+    template <typename CC, typename P> void defProperty(std::string propertyName, P CC::*pm) {
+        static_assert(std::is_same_v<C, CC>);
         std::function<PropertyGetter> fget = [=](C *self, JSContextRef ctx, JSValueRef *exception) {
             P v = self->*pm;
             return detail::generic_cast<P, JSValueRef>(ctx, std::forward<P>(v));
@@ -229,7 +231,7 @@ template <class C, class Base = void> class ClassDef {
 /// @brief A Proxy of Class<C>, can export to javascript context.
 class ClassProxy {
   public:
-    using Holder = Holder<JSObjectRef>;
+    using Holder = JSHolder<JSObjectRef>;
     // template <typename C> static JSClassDefinition make_class_def() {
     //     auto clazz = ClassRegistry::getIntance().findJSClass<C>();
     //     JSClassDefinition def;

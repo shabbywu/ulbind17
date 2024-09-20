@@ -17,7 +17,7 @@ class Null : public Value<> {
     Null(JSContextRef ctx) : Value(ctx, make_null(ctx)) {};
 
   public:
-    nullptr_t value() const {
+    std::nullptr_t value() const {
         return nullptr;
     }
 
