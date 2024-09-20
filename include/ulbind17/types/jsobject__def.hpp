@@ -5,6 +5,7 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ulbind17 {
 namespace detail {
@@ -31,7 +32,7 @@ class Object : public Value<JSObjectRef> {
     virtual inline unsigned int size() const;
 
     virtual inline unsigned int length() const;
-
+    virtual inline std::vector<std::string> keys() const;
     inline std::string toString() const;
 #pragma endregion
 

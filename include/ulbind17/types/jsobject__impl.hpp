@@ -18,6 +18,16 @@ inline unsigned int Object::length() const {
     return o.get<Function<Array(Object)>>("keys")(holder).size();
 };
 
+inline std::vector<std::string> Object::keys() const {
+    std::vector<std::string> result;
+    auto o = GetGlobalObject(holder->ctx).get<Object>("Object");
+    auto keys = o.get<Function<Array(Object)>>("keys")(holder);
+    for (int i = 0; i < keys.size(); i++) {
+        result.push_back(keys.get<std::string>(i));
+    }
+    return result;
+}
+
 inline std::string Object::toString() const {
     return get<Function<std::string()>>("toString")();
 }
