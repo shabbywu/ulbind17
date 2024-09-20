@@ -26,7 +26,8 @@ template <class Return, class... Args> class Function<Return(Args...)> : public 
 
   public:
     Function &operator=(const Function &other) {
-        this->holder = other.holder;
+        Object::holder = other.Object::holder;
+        Boundable::holder = other.Boundable::holder;
         return *this;
     }
 };
