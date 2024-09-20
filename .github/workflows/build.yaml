@@ -68,7 +68,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.preset }}.${{ github.ref_name }}
+          name: ${{ runner.os }}.${{ github.ref_name }}
           path: bin
           retention-days: 14
 
