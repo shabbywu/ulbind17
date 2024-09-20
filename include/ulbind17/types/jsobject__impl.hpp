@@ -1,11 +1,28 @@
 #pragma once
-#include "ulbind17/cast.hpp"
+#include "jsfunction.hpp"
 #include "jsobject__def.hpp"
 #include "nativefunction.hpp"
 #include "property.hpp"
+#include "ulbind17/cast.hpp"
 
 namespace ulbind17 {
 namespace detail {
+#pragma region js api
+inline unsigned int Object::size() const {
+    auto o = GetGlobalObject(holder->ctx).get<Object>("Object");
+    return o.get<Function<Array(Object)>>("keys")(holder).size();
+};
+
+inline unsigned int Object::length() const {
+    auto o = GetGlobalObject(holder->ctx).get<Object>("Object");
+    return o.get<Function<Array(Object)>>("keys")(holder).size();
+};
+
+inline std::string Object::toString() const {
+    return get<Function<std::string()>>("toString")();
+}
+#pragma endregion
+
 BoundProperty Object::operator[](std::string propertyName) const {
     return BoundProperty(holder, propertyName);
 }

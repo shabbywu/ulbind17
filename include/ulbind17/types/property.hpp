@@ -1,4 +1,5 @@
 #pragma once
+#include "boundable.hpp"
 #include "jsvalue.hpp"
 #include "ulbind17/cast.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
@@ -7,7 +8,7 @@
 
 namespace ulbind17 {
 namespace detail {
-class BoundProperty : public Value<JSObjectRef> {
+class BoundProperty : public Boundable {
   protected:
     enum class Mode {
         None,
@@ -20,12 +21,11 @@ class BoundProperty : public Value<JSObjectRef> {
     unsigned int propertyIndex;
 
   public:
-    using Value<JSObjectRef>::Value;
-    BoundProperty(decltype(Value::holder) holder, std::string propertyName)
-        : Value(holder), propertyName(propertyName), propertyIndex(-1), mode(Mode::PropertyName) {
+    BoundProperty(decltype(BoundProperty::holder) holder, std::string propertyName)
+        : Boundable(holder), propertyName(propertyName), propertyIndex(-1), mode(Mode::PropertyName) {
     }
-    BoundProperty(decltype(Value::holder) holder, unsigned int propertyIndex)
-        : Value(holder), propertyIndex(propertyIndex), propertyName(""), mode(Mode::PropertyIndex) {
+    BoundProperty(decltype(BoundProperty::holder) holder, unsigned int propertyIndex)
+        : Boundable(holder), propertyIndex(propertyIndex), propertyName(""), mode(Mode::PropertyIndex) {
     }
 
   public:
@@ -36,11 +36,19 @@ class BoundProperty : public Value<JSObjectRef> {
             auto propertyName = generic_cast<const std::string, JSStringRef>(
                 holder->ctx, std::forward<const std::string>(this->propertyName));
             auto p = JSObjectGetProperty(holder->ctx, object, propertyName, nullptr);
-            return generic_cast<JSValueRef, Return>(holder->ctx, std::forward<JSValueRef>(p));
+            Return v = generic_cast<JSValueRef, Return>(holder->ctx, std::forward<JSValueRef>(p));
+            if constexpr (std::is_base_of_v<Boundable, Return>) {
+                v.bindTo(holder);
+            }
+            return v;
         } else {
             auto object = holder->ToObjectRef();
             auto p = JSObjectGetPropertyAtIndex(holder->ctx, object, this->propertyIndex, nullptr);
-            return generic_cast<JSValueRef, Return>(holder->ctx, std::forward<JSValueRef>(p));
+            Return v = generic_cast<JSValueRef, Return>(holder->ctx, std::forward<JSValueRef>(p));
+            if constexpr (std::is_base_of_v<Boundable, Return>) {
+                v.bindTo(holder);
+            }
+            return v;
         }
     }
 

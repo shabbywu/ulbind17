@@ -5,7 +5,7 @@
 
 namespace ulbind17 {
 namespace detail {
-// cast pointer to JSObjectRef/JSValueRef
+#pragma region cast pointer to JSObjectRef/JSValueRef
 template <typename FromType, typename ToType,
           typename std::enable_if_t<std::is_class_v<std::remove_pointer_t<FromType>> && std::is_pointer_v<FromType> &&
                                     !(std::is_same_v<std::decay_t<FromType>, JSValueRef> ||
@@ -17,8 +17,9 @@ static ToType generic_cast(JSContextRef ctx, FromType &&from) {
     auto clazz = detail::ClassRegistry::getIntance().findJSClass<TClass>();
     return clazz->makeInstance(ctx, from);
 }
+#pragma endregion
 
-// cast JSObjectRef/JSValueRef to pointer
+#pragma region cast JSObjectRef/JSValueRef to pointer
 template <typename FromType, typename ToType,
           typename std::enable_if_t<std::is_same_v<std::decay_t<FromType>, JSObjectRef>> * = nullptr,
           typename std::enable_if_t<std::is_class_v<std::remove_pointer_t<ToType>> && std::is_pointer_v<ToType> &&
@@ -37,6 +38,6 @@ static ToType generic_cast(JSContextRef ctx, FromType &&from) {
     auto object = JSValueToObject(ctx, from, nullptr);
     return (ToType)JSObjectGetPrivate(object);
 }
-
+#pragma endregion
 } // namespace detail
 } // namespace ulbind17

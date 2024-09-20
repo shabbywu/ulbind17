@@ -26,6 +26,17 @@ class Array : public Object {
         this->holder = other.holder;
         return *this;
     }
+
+#pragma region js api
+  public:
+    virtual unsigned int size() const {
+        return Object::get<unsigned int>("length");
+    }
+
+    virtual unsigned int length() const {
+        return Object::get<unsigned int>("length");
+    }
+#pragma endregion
 };
 
 template <typename T> class TypedArray : public Array {

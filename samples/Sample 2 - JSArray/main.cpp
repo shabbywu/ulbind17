@@ -1,5 +1,8 @@
 #include <ulbind17/setup.hpp>
+#include <ulbind17/types/jsiterator.hpp>
 #include <ulbind17/ulbind17.hpp>
+
+using namespace ulbind17;
 
 // the partial specialization of A is enabled via a template parameter
 ///
@@ -33,6 +36,18 @@ void Sample2() {
     array.set(6, true);
     window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
 
+    auto it = ulbind17::detail::Iterator(ctx->ctx(), array.get<ulbind17::detail::Function<JSObjectRef()>>("keys")());
+    std::cout << "it: " << it.toString() << std::endl;
+    {
+        auto o = it.next();
+        std::cout << "o.value: " << o.get<int>("value") << std::endl;
+        assert(o.get<int>("value") == 0);
+
+        o = it.next();
+        std::cout << "o.value: " << o.get<int>("value") << std::endl;
+        assert(o.get<int>("value") == 1);
+    }
+
     ulbind17::detail::Script script(ctx->ctx(), R"(
         logInfo("" + array) // "s0,1,2.2,,s4"
         array[0] = 0
@@ -41,6 +56,7 @@ void Sample2() {
     script.Evaluate<void>();
     assert(array.get<int>(0) == 0);
     std::cout << "array[0]: " << array.get<int>(0) << std::endl;
+    std::cout << "array.size = " << array.size() << std::endl;
 }
 
 int main() {
