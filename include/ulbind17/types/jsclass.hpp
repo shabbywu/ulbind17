@@ -4,7 +4,6 @@
 #include "ulbind17/types/jsstring.hpp"
 #include "ulbind17/types/nativefunction.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
-#include <format>
 #include <map>
 #include <memory>
 #include <set>
