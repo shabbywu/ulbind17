@@ -1,6 +1,7 @@
 #pragma once
 #include "jsfunction.hpp"
 #include "jsobject__def.hpp"
+#include "jsscript.hpp"
 #include "nativefunction.hpp"
 #include "property.hpp"
 #include "ulbind17/cast.hpp"
@@ -40,6 +41,23 @@ BoundProperty Object::operator[](std::string propertyName) const {
 BoundProperty Object::operator[](unsigned int propertyIndex) const {
     return BoundProperty(holder, propertyIndex);
 }
+
+#pragma region self-reflection api
+inline bool Object::isFunction() const {
+    return Script(holder->ctx, "typeof this == 'function'").Evaluate<bool>(rawref());
+}
+
+#pragma endregion
+
+#pragma region object::contains
+inline bool Object::contains(std::string propertyName) const {
+    return !JSValueIsUndefined(holder->ctx, this->operator[](propertyName).value<JSValueRef>());
+}
+
+inline bool Object::contains(unsigned int propertyIndex) const {
+    return !JSValueIsUndefined(holder->ctx, this->operator[](propertyIndex).value<JSValueRef>());
+}
+#pragma endregion
 
 #pragma region object::getter
 template <typename Return> Return Object::get(std::string propertyName) const {

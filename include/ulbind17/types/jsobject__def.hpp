@@ -36,10 +36,19 @@ class Object : public Value<JSObjectRef> {
     inline std::string toString() const;
 #pragma endregion
 
+#pragma region self-reflection api
+  public:
+    inline bool isFunction() const;
+#pragma endregion
+
   public:
     inline BoundProperty operator[](std::string propertyName) const;
 
     inline BoundProperty operator[](unsigned int propertyIndex) const;
+
+  public:
+    inline bool contains(std::string propertyName) const;
+    inline bool contains(unsigned int propertyIndex) const;
 
   public:
     // getter
