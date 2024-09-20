@@ -15,11 +15,11 @@ inline void js_call_setup_args(JSContextRef ctx, JSValueRef *arguments, Arg &&he
 
 template <class... Args> inline void js_call_setup_args(JSContextRef ctx, JSValueRef *arguments, Args... args) {
     js_call_setup_args(ctx, arguments, args...);
-    return arguments;
 }
 
 template <class Return, class... Args>
-inline std::enable_if_t<!std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj, Args... args) {
+inline std::enable_if_t<!std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj,
+                                                         Args... args) {
     JSValueRef *arguments = nullptr;
     if (sizeof...(args) >= 1) {
         arguments = new JSValueRef[sizeof...(args)];
@@ -37,9 +37,9 @@ inline std::enable_if_t<!std::is_void_v<Return>> js_call(JSContextRef ctx, JSObj
     }
 }
 
-
 template <class Return, class... Args>
-inline std::enable_if_t<std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj, Args... args) {
+inline std::enable_if_t<std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj,
+                                                        Args... args) {
     JSValueRef *arguments = nullptr;
     if (sizeof...(args) >= 1) {
         arguments = new JSValueRef[sizeof...(args)];
@@ -53,7 +53,6 @@ inline std::enable_if_t<std::is_void_v<Return>> js_call(JSContextRef ctx, JSObje
     if (exception) {
         throw "...";
     } else {
-        
     }
 }
 

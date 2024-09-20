@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "ulbind17/cast.hpp"
 #include "ulbind17/detail/function/js_call.hpp"
 #include "ulbind17/detail/function/load_args.hpp"
 #include "ulbind17/detail/function/type_traits.hpp"
