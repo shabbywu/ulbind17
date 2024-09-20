@@ -17,7 +17,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   FetchContent_Declare(
     ultralight-sdk-package
-    URL https://mirror.ghproxy.com/https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-win-x64.7z
+    URL https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-win-x64.7z
     URL_HASH MD5=6b2de2e4b341503909f3635edf50e926
     SOURCE_SUBDIR "invalid_source_subdir" EXCLUDE_FROM_ALL)
   message("fetching ultralight-sdk-package...")
