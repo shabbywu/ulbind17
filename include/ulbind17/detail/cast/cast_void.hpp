@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ulbind17/types/jsstring.hpp"
+#include <JavaScriptCore/JSRetainPtr.h>
 
 namespace ulbind17 {
 namespace detail {

@@ -1,7 +1,6 @@
 #pragma once
 #include "jsstring.hpp"
 #include "jsvalue.hpp"
-#include "ulbind17/detail/cast/cast_string.hpp"
 #include "ulbind17/detail/function/type_traits.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
