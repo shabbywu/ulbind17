@@ -1,4 +1,5 @@
 #pragma once
+#include "ulbind17/cast.hpp"
 #include "jsobject__def.hpp"
 #include "nativefunction.hpp"
 #include "property.hpp"

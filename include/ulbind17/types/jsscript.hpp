@@ -1,7 +1,7 @@
 #pragma once
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
-
+#include "ulbind17/cast.hpp"
 #include "jsstring.hpp"
 
 namespace ulbind17 {
