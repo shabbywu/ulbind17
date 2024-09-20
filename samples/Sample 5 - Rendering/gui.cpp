@@ -79,6 +79,7 @@ int showGUI(RefPtr<Renderer> &renderer, RefPtr<View> &view) {
 
         // render
         // ------
+        renderer->RefreshDisplay(0);
         renderer->Render();
         BitmapSurface *surface = (BitmapSurface *)(view->surface());
         if (!surface->dirty_bounds().IsEmpty()) {

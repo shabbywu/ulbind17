@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
+
+option(ENABLE_TEST "enable test?" FALSE)
 project(ulbind17)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -7,8 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(ULBINDING_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/externals/include)
 set(EXTRA_LIBRARY_DIR ${CMAKE_CURRENT_LIST_DIR}/externals/libs)
-
-option(ENABLE_TEST "enable test?" FALSE)
 
 add_subdirectory(embedded)
 add_subdirectory(ultralight-sdk)
