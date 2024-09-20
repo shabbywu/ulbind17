@@ -33,7 +33,7 @@ inline Return js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj
     if (exception) {
         throw std::exception("...");
     } else {
-        return generic_cast(JSValueRef, Return)(ctx, std::forward<JSValueRef>(result));
+        return generic_cast<JSValueRef, Return>(ctx, std::forward<JSValueRef>(result));
     }
 }
 } // namespace detail
