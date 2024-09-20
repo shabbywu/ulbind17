@@ -27,6 +27,10 @@ jobs:
           env:
             CC:   gcc-13
             CXX:  g++-13
+        - name: 🍎 Build (MacOS, CMake)
+          preset: default
+          os: macos-latest
+          env: {}
 
     steps:
       - name: Checkout
