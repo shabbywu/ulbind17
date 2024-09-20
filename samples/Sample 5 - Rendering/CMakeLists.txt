@@ -1,10 +1,9 @@
 set(APP_NAME Sample5)
 
-add_library(GLAD glad.c)
-target_include_directories(GLAD PUBLIC ${EXTRA_INCLUDE_DIR})
-
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glad CONFIG REQUIRED)
 add_executable(${APP_NAME} WIN32 MACOSX_BUNDLE "main.cpp" "gui.cpp")
-target_link_libraries(${APP_NAME} ulbind17::ulbind17 glfw3 GLAD)
+target_link_libraries(${APP_NAME} ulbind17::ulbind17 glfw glad::glad)
 
 if(APPLE)
   # Enable High-DPI on macOS through our custom Info.plist template

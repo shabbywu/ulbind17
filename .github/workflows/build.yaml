@@ -27,7 +27,7 @@ jobs:
           env:
             CC:   gcc-13
             CXX:  g++-13
-  
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,7 +43,12 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13
 
-      - name: Run CMake consuming CMakePreset.json
+      - name: Setup anew (or from cache) vcpkg (and does not build any package)
+        uses: lukka/run-vcpkg@v11 # Always specify the specific _version_ of the
+                                  # action you need, `v11` in this case to stay up
+                                  # to date with fixes on the v11 branch.
+
+      - name: Run CMake consuming CMakePreset.json and run vcpkg to build packages
         uses: lukka/run-cmake@v10
         with:
           configurePreset: ${{ matrix.preset }}
