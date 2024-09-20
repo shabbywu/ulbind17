@@ -52,9 +52,10 @@ void Sample4() {
         logInfo("a.i = " + a.i)
         a.i++
         a.method(3, "重要的事情说三遍");
-        logInfo(typeof logInfo)
+        logInfo(typeof logInfo);
+        return 1;
     )")
-        .Evaluate();
+        .Evaluate<int>();
     JSGarbageCollect(ctx->ctx());
     std::cout << "after js\n> a.i = " << a.i << std::endl;
 }

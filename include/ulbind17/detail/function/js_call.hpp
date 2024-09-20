@@ -18,8 +18,8 @@ template <class... Args> inline void js_call_setup_args(JSContextRef ctx, JSValu
 }
 
 template <class Return, class... Args>
-inline std::enable_if_t<!std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj,
-                                                         Args... args) {
+inline std::enable_if_t<!std::is_void_v<Return>, Return> js_call(JSContextRef ctx, JSObjectRef funcObj,
+                                                                 JSObjectRef thisObj, Args... args) {
     JSValueRef *arguments = nullptr;
     if (sizeof...(args) >= 1) {
         arguments = new JSValueRef[sizeof...(args)];
