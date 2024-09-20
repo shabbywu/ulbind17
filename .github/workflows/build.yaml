@@ -41,9 +41,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13 xorg openbox
+          sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13 xorg xinerama xcursor libglu1-mesa
 
-      - name: Install dependencies
+      - name: 🍎 Install dependencies
         if: runner.os == 'macOS'
         run: |
           brew --cask install xquartz
