@@ -1,6 +1,7 @@
 #pragma once
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
+#include <string>
 
 #include "jsvalue.hpp"
 
@@ -20,10 +21,10 @@ class BoundProperty : public Value<JSObjectRef> {
 
   public:
     using Value<JSObjectRef>::Value;
-    BoundProperty(typename decltype(Value::holder) holder, std::string propertyName)
+    BoundProperty(decltype(Value::holder) holder, std::string propertyName)
         : Value(holder), propertyName(propertyName), propertyIndex(-1), mode(Mode::PropertyName) {
     }
-    BoundProperty(typename decltype(Value::holder) holder, unsigned int propertyIndex)
+    BoundProperty(decltype(Value::holder) holder, unsigned int propertyIndex)
         : Value(holder), propertyIndex(propertyIndex), propertyName(""), mode(Mode::PropertyIndex) {
     }
 

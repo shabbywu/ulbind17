@@ -15,14 +15,14 @@ static inline std::string exception_to_string(JSContextRef ctx, JSValueRef excep
     return buffer;
 }
 
-template <typename T> class Holder;
+template <typename T> class JSHolder;
 
-template <typename T = JSValueRef> class Holder {
+template <typename T = JSValueRef> class JSHolder {
   public:
-    Holder(JSContextRef ctx, T value) : ctx(ctx), value(value) {
+    JSHolder(JSContextRef ctx, T value) : ctx(ctx), value(value) {
         JSValueProtect(ctx, value);
     }
-    ~Holder() {
+    ~JSHolder() {
         JSValueUnprotect(ctx, value);
     }
     JSContextRef ctx;
@@ -41,7 +41,7 @@ template <typename T = JSValueRef> class Holder {
         JSValueRef exception = nullptr;
         auto ref = adopt(JSValueToStringCopy(ctx, value, &exception));
         if (exception) {
-            throw std::exception("cast exception");
+            throw "cast exception";
         }
         return ref;
     }
@@ -50,7 +50,7 @@ template <typename T = JSValueRef> class Holder {
         JSValueRef exception = nullptr;
         auto number = JSValueToNumber(ctx, value, &exception);
         if (exception) {
-            throw std::exception("cast exception");
+            throw "cast exception";
         }
         return number;
     }
@@ -60,14 +60,14 @@ template <typename T = JSValueRef> class Holder {
     }
 };
 
-template <> class Holder<JSClassRef> {
+template <> class JSHolder<JSClassRef> {
   public:
-    Holder(JSContextRef ctx, JSClassRef value) : ctx(ctx), value(value) {
+    JSHolder(JSContextRef ctx, JSClassRef value) : ctx(ctx), value(value) {
         if (value) {
             JSClassRetain(value);
         }
     }
-    ~Holder() {
+    ~JSHolder() {
         if (value) {
             JSClassRelease(value);
         }

@@ -19,7 +19,7 @@ template <class... Args> inline void js_call_setup_args(JSContextRef ctx, JSValu
 }
 
 template <class Return, class... Args>
-inline Return js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj, Args... args) {
+inline std::enable_if_t<!std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj, Args... args) {
     JSValueRef *arguments = nullptr;
     if (sizeof...(args) >= 1) {
         arguments = new JSValueRef[sizeof...(args)];
@@ -31,10 +31,31 @@ inline Return js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj
     if (arguments != nullptr)
         delete[] arguments;
     if (exception) {
-        throw std::exception("...");
+        throw "...";
     } else {
         return generic_cast<JSValueRef, Return>(ctx, std::forward<JSValueRef>(result));
     }
 }
+
+
+template <class Return, class... Args>
+inline std::enable_if_t<std::is_void_v<Return>> js_call(JSContextRef ctx, JSObjectRef funcObj, JSObjectRef thisObj, Args... args) {
+    JSValueRef *arguments = nullptr;
+    if (sizeof...(args) >= 1) {
+        arguments = new JSValueRef[sizeof...(args)];
+        js_call_setup_args(ctx, arguments, args...);
+    }
+
+    JSValueRef exception = 0;
+    JSValueRef result = JSObjectCallAsFunction(ctx, funcObj, thisObj, sizeof...(args), arguments, &exception);
+    if (arguments != nullptr)
+        delete[] arguments;
+    if (exception) {
+        throw "...";
+    } else {
+        
+    }
+}
+
 } // namespace detail
 } // namespace ulbind17

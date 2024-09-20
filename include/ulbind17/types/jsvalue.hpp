@@ -8,11 +8,11 @@ namespace ulbind17 {
 namespace detail {
 template <typename T = JSValueRef> class Value {
   public:
-    std::shared_ptr<Holder<T>> holder;
+    std::shared_ptr<JSHolder<T>> holder;
 
   public:
-    Value(JSContextRef ctx, T ref) : holder(std::make_shared<Holder<T>>(ctx, ref)) {};
-    Value(std::shared_ptr<Holder<T>> ref) : holder(ref) {};
+    Value(JSContextRef ctx, T ref) : holder(std::make_shared<JSHolder<T>>(ctx, ref)) {};
+    Value(std::shared_ptr<JSHolder<T>> ref) : holder(ref) {};
 
   public:
     JSType type() const {

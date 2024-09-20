@@ -79,7 +79,9 @@ class Object : public Value<JSObjectRef> {
     template <typename Func, typename FuncSignature = function_signature_t<Func>>
     void bindFunc(unsigned int propertyIndex, Func &&v) {
         auto object = holder->ToObjectRef();
-        auto value = GenericCast<JSValueRef(Func &), FuncSignature>(holder->ctx, v);
+
+        auto func = to_cpp_function(std::forward<Func>(v));
+        auto value = NativeFunction<FuncSignature>(holder->ctx, func).rawref();
         JSObjectSetPropertyAtIndex(holder->ctx, object, propertyIndex, value, nullptr);
     }
 };

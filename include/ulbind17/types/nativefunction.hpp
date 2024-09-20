@@ -42,7 +42,7 @@ template <typename T> class NativeFunction : public NativeFunctionBase {};
 
 template <class Return, class... Args> class NativeFunction<Return(Args...)> : public NativeFunctionBase {
   protected:
-    using Holder = Holder<JSObjectRef>;
+    using Holder = JSHolder<JSObjectRef>;
     std::shared_ptr<Holder> holder;
 
   public:

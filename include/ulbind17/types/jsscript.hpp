@@ -16,7 +16,7 @@ class Script {
     Return Evaluate(JSObjectRef thisObject = nullptr, JSValueRef *exception = nullptr) {
         JSValueRef result = JSEvaluateScript(ctx, script.rawref(), thisObject, nullptr, 0, exception);
         if (exception) {
-            throw std::exception("failed to evaluate javascript");
+            throw "failed to evaluate javascript";
         }
         return generic_cast<JSValueRef, Return>(ctx, std::forward<JSValueRef>(result));
     }

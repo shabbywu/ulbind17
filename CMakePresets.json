@@ -3,7 +3,7 @@
 	"configurePresets": [
 		{
 			"name": "default",
-			"binaryDir": "${sourceDir}/build/${presetName}",
+			"binaryDir": "${sourceDir}/build/${hostSystemName}",
 			"cacheVariables": {
 				"CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/"
 			}
