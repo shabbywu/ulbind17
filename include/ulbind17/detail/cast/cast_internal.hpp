@@ -1,6 +1,7 @@
 #pragma once
 
-#include "ulbind17/types/jsstring.hpp"
+#include "ulbind17/types/jsobject__def.hpp"
+#include <JavaScriptCore/JSObjectRef.h>
 
 namespace ulbind17 {
 namespace detail {
@@ -20,6 +21,8 @@ template <typename FromType, typename ToType,
 ToType generic_cast(JSContextRef ctx, FromType &&value) {
     return JSValueToObject(ctx, value, nullptr);
 };
+
+// cast Object to JSValueRef
 
 template <typename FromType, typename ToType,
           typename std::enable_if_t<std::is_same_v<std::decay_t<FromType>, Object>> * = nullptr,

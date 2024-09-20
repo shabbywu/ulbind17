@@ -1,9 +1,9 @@
 #pragma once
+#include "jsvalue.hpp"
+#include "ulbind17/detail/cast/cast_string.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
 #include <string>
-
-#include "jsvalue.hpp"
 
 namespace ulbind17 {
 namespace detail {

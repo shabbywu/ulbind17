@@ -2,7 +2,7 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
 
-#include "jsobject.hpp"
+#include "jsobject__def.hpp"
 
 namespace ulbind17 {
 namespace detail {

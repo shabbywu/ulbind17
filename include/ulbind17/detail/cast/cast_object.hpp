@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ulbind17/types/jsclass.hpp"
+#include "ulbind17/types/jsclass__def.hpp"
 #include "ulbind17/types/jsstring.hpp"
 
 namespace ulbind17 {
