@@ -56,7 +56,7 @@ template <typename C> class Class : public ClassBase {
         JSClassRetain(holder->value);
     }
 
-    virtual JSObjectRef makeInstance(JSContextRef ctx, void *self) {
+    virtual JSObjectRef makeInstance(JSContextRef ctx, void *self) override {
         return JSObjectMake(ctx, holder->value, self);
     }
 
@@ -76,7 +76,8 @@ template <typename C> class Class : public ClassBase {
         }
     }
 
-    JSValueRef getProperty(JSContextRef ctx, JSObjectRef object, std::string propertyName, JSValueRef *exception) {
+    virtual JSValueRef getProperty(JSContextRef ctx, JSObjectRef object, std::string propertyName,
+                                   JSValueRef *exception) {
         auto instance = (C *)JSObjectGetPrivate(object);
         auto i = getter.find(propertyName);
         if (i == getter.end()) {
@@ -89,8 +90,8 @@ template <typename C> class Class : public ClassBase {
         return i->second(instance, ctx, exception);
     }
 
-    bool setProperty(JSContextRef ctx, JSObjectRef object, std::string propertyName, JSValueRef value,
-                     JSValueRef *exception) {
+    virtual bool setProperty(JSContextRef ctx, JSObjectRef object, std::string propertyName, JSValueRef value,
+                             JSValueRef *exception) {
         auto instance = (C *)JSObjectGetPrivate(object);
         auto i = setter.find(propertyName);
         if (i == setter.end()) {
