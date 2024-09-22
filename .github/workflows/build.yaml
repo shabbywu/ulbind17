@@ -21,16 +21,19 @@ jobs:
           preset: default
           os: windows-2022
           env: {}
+          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
         - name: 🐧 Build (Linux, GCC, CMake)
           preset: default
           os: ubuntu-24.04
           env:
             CC:   gcc-13
             CXX:  g++-13
+          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
         - name: 🍎 Build (MacOS, CMake)
           preset: default
           os: macos-latest
           env: {}
+          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"']"
 
     steps:
       - name: Checkout
