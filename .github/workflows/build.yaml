@@ -29,11 +29,16 @@ jobs:
             CC:   gcc-13
             CXX:  g++-13
           configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
-        - name: 🍎 Build (MacOS, CMake)
+        - name: 🍎 Build (MacOS, x86_64, CMake)
           preset: default
           os: macos-latest
           env: {}
-          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"arm64;x86_64\"']"
+          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"x86_64\"']"
+        - name: 🍎 Build (MacOS, arm64, CMake)
+          preset: default
+          os: macos-latest
+          env: {}
+          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"arm64\"']"
 
     steps:
       - name: Checkout
