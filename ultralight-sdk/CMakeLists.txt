@@ -21,15 +21,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     EXPECTED_MD5 6b2de2e4b341503909f3635edf50e926)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
-    message(STATUS "Building for ARM")
-    file(
-      DOWNLOAD
-      https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-mac-arm64.7z
-      ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-      SHOW_PROGRESS
-      EXPECTED_MD5 eb151b5abb34f0ebd0be97139fc2e725)
-  else()
+  if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
     message(STATUS "Building for x86_64 or Universal")
     file(
       DOWNLOAD
@@ -37,6 +29,14 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
       EXPECTED_MD5 318b3cccf30b82dee21085d08b2e2200)
+  else()
+    message(STATUS "Building for ARM")
+    file(
+      DOWNLOAD
+      https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-mac-arm64.7z
+      ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
+      SHOW_PROGRESS
+      EXPECTED_MD5 eb151b5abb34f0ebd0be97139fc2e725)
   endif()
 else()
   message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
