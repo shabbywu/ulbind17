@@ -19,11 +19,13 @@ jobs:
         include:
         - name: 🏁 Build (Windows, MSVC, CMake)
           preset: default
+          artifact: windows
           os: windows-2022
           env: {}
           configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
         - name: 🐧 Build (Linux, GCC, CMake)
           preset: default
+          artifact: linux
           os: ubuntu-24.04
           env:
             CC:   gcc-13
@@ -31,11 +33,13 @@ jobs:
           configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
         - name: 🍎 Build (MacOS, x86_64, CMake)
           preset: default
+          artifact: macos-x86_64
           os: macos-latest
           env: {}
           configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"x86_64\"']"
         - name: 🍎 Build (MacOS, arm64, CMake)
           preset: default
+          artifact: macos-arm64
           os: macos-latest
           env: {}
           configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"arm64\"']"
@@ -71,7 +75,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}.${{ github.ref_name }}
+          name: ${{ matrix.artifact }}.${{ github.ref_name }}
           path: bin
           retention-days: 14
 
