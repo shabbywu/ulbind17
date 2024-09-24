@@ -15,10 +15,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(
     DOWNLOAD
-    https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-win-x64.7z
+    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-win-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 6b2de2e4b341503909f3635edf50e926)
+    EXPECTED_MD5 24be16afe81f202743d05dbdeead1b54)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
