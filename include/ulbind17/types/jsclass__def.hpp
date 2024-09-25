@@ -47,7 +47,7 @@ template <typename C> class Class : public ClassBase {
         return holder->value;
     }
 
-    virtual void end(JSClassDefinition &def) {
+    virtual void end(JSClassDefinition &def) override {
         if (defined) {
             throw "class is defined";
         }
@@ -60,14 +60,14 @@ template <typename C> class Class : public ClassBase {
         return JSObjectMake(ctx, holder->value, self);
     }
 
-    virtual void initializeInstance(JSContextRef ctx, JSObjectRef object) {
+    virtual void initializeInstance(JSContextRef ctx, JSObjectRef object) override {
         // TODO: set by ClassDef
         // auto self = std::shared_ptr<C>();
         // instances.insert(self);
         // JSObjectSetPrivate(object, self.get());
     }
 
-    virtual void finalizeInstance(JSObjectRef object) {
+    virtual void finalizeInstance(JSObjectRef object) override {
         C *p = (C *)JSObjectGetPrivate(object);
         auto it = findInstance(p);
         if (it != instances.end()) {

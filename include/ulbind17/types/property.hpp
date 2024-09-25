@@ -72,8 +72,10 @@ class BoundProperty : public Boundable {
         if (this->holder != other.holder) {
             assign(other.value());
         } else if ((this->mode == Mode::PropertyName && this->propertyName != other.propertyName) ||
-                   (this->mode == Mode::PropertyIndex && this->propertyIndex != other.propertyIndex))
-            return *this;
+                   (this->mode == Mode::PropertyIndex && this->propertyIndex != other.propertyIndex)) {
+            // TODO
+        }
+        return *this;
     }
 
     template <typename T, std::enable_if_t<!std::is_same_v<T, BoundProperty>> * = nullptr>
