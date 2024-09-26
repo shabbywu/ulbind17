@@ -71,15 +71,3 @@ jobs:
           configurePresetAdditionalArgs: ${{ matrix.configurePresetAdditionalArgs }}
           buildPreset: ${{ matrix.preset }}
         env: ${{ matrix.env }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}.${{ github.ref_name }}
-          path: bin
-          retention-days: 14
-
-      # - name: Build test GDExtension library
-      #   run: |
-      #     cd test && cmake -DCMAKE_BUILD_TYPE=Release -DGODOT_HEADERS_PATH="../godot-headers" -DCPP_BINDINGS_PATH=".." -G"Visual Studio 16 2019" .
-      #     cmake --build . --verbose
