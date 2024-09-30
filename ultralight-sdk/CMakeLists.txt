@@ -8,10 +8,10 @@ message(STATUS "downloading ultralight-sdk...")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   file(
     DOWNLOAD
-    https://github.com/ultralight-ux/Ultralight/releases/download/v1.4.0-beta/ultralight-sdk-1.4.0b-linux-x64.7z
+    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-linux-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 74302987a6e0ae3ce1dddf4bedbe600f)
+    EXPECTED_MD5 a45bf06769302737a266129acf5e8c2f)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(
     DOWNLOAD
