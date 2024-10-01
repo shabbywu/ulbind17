@@ -50,8 +50,11 @@ target_include_directories(
 target_link_libraries(ultralight-sdk INTERFACE UltralightCore Ultralight
                                                WebCore)
 set_target_properties(
-  ultralight-sdk PROPERTIES ULTRALIGHT_BINARY_DIR
-                            "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin")
+  ultralight-sdk
+  PROPERTIES ULTRALIGHT_BINARY_DIR
+             "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin"
+             ULTRALIGHT_INSPECTOR_DIR
+             "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/inspector")
 
 add_library(ultralight-sdk-fullstack INTERFACE)
 target_link_libraries(ultralight-sdk-fullstack INTERFACE ultralight-sdk AppCore)
