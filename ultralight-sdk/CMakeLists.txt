@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.22)
 project(ultralight-sdk)
 include(FetchContent)
 
-add_library(ultralight-sdk INTERFACE)
-
 message(STATUS "downloading ultralight-sdk...")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   file(
@@ -43,6 +41,7 @@ endif()
 file(ARCHIVE_EXTRACT INPUT ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk)
 
+add_library(ultralight-sdk INTERFACE)
 target_link_directories(
   ultralight-sdk INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin"
   "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/lib")
@@ -53,3 +52,6 @@ target_link_libraries(ultralight-sdk INTERFACE UltralightCore Ultralight
 set_target_properties(
   ultralight-sdk PROPERTIES ULTRALIGHT_BINARY_DIR
                             "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin")
+
+add_library(ultralight-sdk-fullstack INTERFACE)
+target_link_libraries(ultralight-sdk-fullstack INTERFACE ultralight-sdk AppCore)
