@@ -9,14 +9,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-linux-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 a45bf06769302737a266129acf5e8c2f)
+    EXPECTED_MD5 97e76515344bb99c4279796bec6d2120)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(
     DOWNLOAD
     https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-win-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 24be16afe81f202743d05dbdeead1b54)
+    EXPECTED_MD5 74fb189d899fe864382bc68775a1c760)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
@@ -25,14 +25,14 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
       https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-x64.7z
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
-      EXPECTED_MD5 eafbb8b5e055123fd3a17197521a6d2f)
+      EXPECTED_MD5 69ff45ed6f190e734163a6f9815681c7)
   else()
     file(
       DOWNLOAD
       https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-arm64.7z
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
-      EXPECTED_MD5 5d9f67d35f8acead7e3912986314eaf6)
+      EXPECTED_MD5 987f756206d85ff003e1134324a60354)
   endif()
 else()
   message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
