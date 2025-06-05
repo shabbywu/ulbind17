@@ -6,33 +6,33 @@ message(STATUS "downloading ultralight-sdk...")
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   file(
     DOWNLOAD
-    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-linux-x64.7z
+    https://github.com/shabbywu/ulbind17/releases/download/ultralight-free-sdk-1.4.0/ultralight-free-sdk-1.4.0-linux-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 97e76515344bb99c4279796bec6d2120)
+    EXPECTED_MD5 2647ea26984881ae56e5c4b5960a0904)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(
     DOWNLOAD
-    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-win-x64.7z
+    https://github.com/shabbywu/ulbind17/releases/download/ultralight-free-sdk-1.4.0/ultralight-free-sdk-1.4.0-win-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 74fb189d899fe864382bc68775a1c760)
+    EXPECTED_MD5 a209d25754e352a35b33c76e52b83bf6)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
     file(
       DOWNLOAD
-      https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-x64.7z
+      https://github.com/shabbywu/ulbind17/releases/download/ultralight-free-sdk-1.4.0/ultralight-free-sdk-1.4.0-mac-x64.7z
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
-      EXPECTED_MD5 69ff45ed6f190e734163a6f9815681c7)
+      EXPECTED_MD5 ed3b9ecbd1396d472f0674524385a650)
   else()
     file(
       DOWNLOAD
-      https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-arm64.7z
+      https://github.com/shabbywu/ulbind17/releases/download/ultralight-free-sdk-1.4.0/ultralight-free-sdk-1.4.0-mac-arm64.7z
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
-      EXPECTED_MD5 987f756206d85ff003e1134324a60354)
+      EXPECTED_MD5 5dbb990cac22aeb74e6a62c9a64b62b2)
   endif()
 else()
   message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
