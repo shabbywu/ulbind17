@@ -16,7 +16,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-win-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 74fb189d899fe864382bc68775a1c760)
+    EXPECTED_MD5 83d9321cf36e5ab15eef3151b3ab5576)
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
