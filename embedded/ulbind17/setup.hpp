@@ -63,7 +63,7 @@ class EmbeddedResourceFileSystem : public platform::FileSystem {
     }
 };
 
-static void setup_ultralight_platform() {
+static void setup_ultralight_platform(Config* cfg = nullptr) {
     static bool inited = false;
     if (inited)
         return;
@@ -71,8 +71,12 @@ static void setup_ultralight_platform() {
     auto &platform = Platform::instance();
 
     // Setup platform
-    Config my_config;
-    platform.set_config(my_config);
+    if (cfg != nullptr) {
+        platform.set_config(*cfg);
+    } else {
+        Config fake_config;
+        platform.set_config(fake_config);
+    }
     auto &font = bin2cpp::getFreeUniversalRegularTtfFile();
     platform.set_font_loader(new platform::MemoryFontLoader(
         {{font.getFileName(),
