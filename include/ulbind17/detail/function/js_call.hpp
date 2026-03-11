@@ -31,7 +31,7 @@ inline std::enable_if_t<!std::is_void_v<Return>, Return> js_call(JSContextRef ct
     if (arguments != nullptr)
         delete[] arguments;
     if (exception) {
-        throw "...";
+        throw std::runtime_error(String(ctx, JSValueToStringCopy(ctx, exception, nullptr)).value().c_str());
     } else {
         return generic_cast<JSValueRef, Return>(ctx, std::forward<JSValueRef>(result));
     }
@@ -51,7 +51,7 @@ inline std::enable_if_t<std::is_void_v<Return>> js_call(JSContextRef ctx, JSObje
     if (arguments != nullptr)
         delete[] arguments;
     if (exception) {
-        throw "...";
+        throw std::runtime_error(String(ctx, JSValueToStringCopy(ctx, exception, nullptr)).value().c_str());
     } else {
     }
 }
