@@ -1,6 +1,7 @@
 #pragma once
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <functional>
+#include <stdexcept
 
 namespace ulbind17 {
 namespace detail {

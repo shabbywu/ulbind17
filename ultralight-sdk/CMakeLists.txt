@@ -9,7 +9,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-linux-x64.7z
     ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
     SHOW_PROGRESS
-    EXPECTED_MD5 97e76515344bb99c4279796bec6d2120)
+    EXPECTED_MD5 cc03958cf6a4468c4a70ce8f3ff913b9)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   file(
     DOWNLOAD
