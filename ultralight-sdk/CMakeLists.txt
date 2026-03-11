@@ -32,7 +32,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
       https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-arm64.7z
       ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
       SHOW_PROGRESS
-      EXPECTED_MD5 987f756206d85ff003e1134324a60354)
+      EXPECTED_MD5 5d3b2477ccf7e12ec02ef7f91ce33813)
   endif()
 else()
   message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
