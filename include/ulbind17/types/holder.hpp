@@ -2,7 +2,7 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
 #include <string>
-#include <stdexcept
+#include <stdexcept>
 
 namespace ulbind17 {
 namespace detail {

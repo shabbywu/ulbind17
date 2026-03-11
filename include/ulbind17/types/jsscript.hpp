@@ -3,7 +3,7 @@
 #include "ulbind17/cast.hpp"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <memory>
-#include <stdexcept
+#include <stdexcept>
 
 namespace ulbind17 {
 namespace detail {
