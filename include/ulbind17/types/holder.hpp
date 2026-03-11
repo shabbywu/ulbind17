@@ -41,7 +41,9 @@ template <typename T = JSValueRef> class JSHolder {
         JSValueRef exception = nullptr;
         auto ref = adopt(JSValueToStringCopy(ctx, value, &exception));
         if (exception) {
-            throw "cast exception";
+            std::string message = "cast exception: ";
+            message += String(ctx, JSValueToStringCopy(ctx, exception, nullptr)).value().c_str();
+            throw std::runtime_error(message);
         }
         return ref;
     }
@@ -50,7 +52,9 @@ template <typename T = JSValueRef> class JSHolder {
         JSValueRef exception = nullptr;
         auto number = JSValueToNumber(ctx, value, &exception);
         if (exception) {
-            throw "cast exception";
+            std::string message = "cast exception: ";
+            message += String(ctx, JSValueToStringCopy(ctx, exception, nullptr)).value().c_str();
+            throw std::runtime_error(message);
         }
         return number;
     }

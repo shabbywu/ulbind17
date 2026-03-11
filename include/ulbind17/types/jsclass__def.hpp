@@ -49,7 +49,7 @@ template <typename C> class Class : public ClassBase {
 
     virtual void end(JSClassDefinition &def) override {
         if (defined) {
-            throw "class is defined";
+            throw std::runtime_error("class is defined");
         }
         defined = true;
         holder->value = JSClassCreate(&def);
