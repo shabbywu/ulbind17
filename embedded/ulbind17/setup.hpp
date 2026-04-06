@@ -54,7 +54,7 @@ class EmbeddedResourceFileSystem : public platform::FileSystem {
         }
 
         {
-            auto &cacert = bin2cpp::getIcudt67lDatFile();
+            auto &cacert = bin2cpp::getCacertPemFile();
             if (p == cacert.getFileName()) {
                 return ultralight::Buffer::Create((void *)cacert.getBuffer(), cacert.getSize(), nullptr, nullptr);
             }
