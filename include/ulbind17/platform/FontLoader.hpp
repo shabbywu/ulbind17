@@ -32,7 +32,7 @@ class MemoryFontLoader : public ultralight::FontLoader {
         if (auto it = _fonts.find(font); it != _fonts.end()) {
             return it->second;
         }
-        return nullptr;
+        return _fonts.begin()->second;
     }
 
   protected:
