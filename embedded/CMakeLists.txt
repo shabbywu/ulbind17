@@ -2,6 +2,8 @@ add_library(
   embedded_resources
   ulbind17/fonts/FreeUniversal-Regular.cpp
   ulbind17/fonts/FreeUniversal-Regular.h
+  ulbind17/fonts/AlimamaShuHeiTi-Bold.cpp
+  ulbind17/fonts/AlimamaShuHeiTi-Bold.h
   ulbind17/resources/cacert.cpp
   ulbind17/resources/cacert.h
   ulbind17/resources/icudt67l.cpp

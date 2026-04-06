@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include "fonts/FreeUniversal-Regular.h"
+#include "fonts/AlimamaShuHeiTi-Bold.h"
 #include "resources/cacert.h"
 #include "resources/icudt67l.h"
 #include <Ultralight/Ultralight.h>
@@ -78,6 +79,30 @@ static void setup_ultralight_platform(Config* cfg = nullptr) {
         platform.set_config(fake_config);
     }
     auto &font = bin2cpp::getFreeUniversalRegularTtfFile();
+    platform.set_font_loader(new platform::MemoryFontLoader(
+        {{font.getFileName(),
+          FontFile::Create(Buffer::Create((void *)font.getBuffer(), font.getSize(), nullptr, nullptr))}}));
+    platform.set_file_system(new EmbeddedResourceFileSystem("./assets/"));
+
+    platform.set_logger(StdoutLogger::instance());
+    inited = true;
+}
+
+static void setup_ultralight_platform_with_chinese_font(Config* cfg = nullptr) {
+    static bool inited = false;
+    if (inited)
+        return;
+    // Get the Platform singleton (maintains global library state)
+    auto &platform = Platform::instance();
+
+    // Setup platform
+    if (cfg != nullptr) {
+        platform.set_config(*cfg);
+    } else {
+        Config fake_config;
+        platform.set_config(fake_config);
+    }
+    auto &font = bin2cpp::getAlimamaShuHeiTiBoldTtfFile();
     platform.set_font_loader(new platform::MemoryFontLoader(
         {{font.getFileName(),
           FontFile::Create(Buffer::Create((void *)font.getBuffer(), font.getSize(), nullptr, nullptr))}}));
