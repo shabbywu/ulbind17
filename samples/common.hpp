@@ -2,6 +2,7 @@
 #include <ulbind17/setup.hpp>
 #include <ulbind17/ulbind17.hpp>
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -39,7 +40,7 @@ struct Fixture {
         // Load our own local page before evaluating scripts against the bridge.
         struct Ready : ultralight::LoadListener {
             bool ready = false;
-            void OnDOMReady(View *, unsigned long long, bool main_frame, const ultralight::String &) override {
+            void OnDOMReady(View *, std::uint64_t, bool main_frame, const ultralight::String &) override {
                 if (main_frame)
                     ready = true;
             }

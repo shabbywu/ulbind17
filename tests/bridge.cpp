@@ -1,5 +1,6 @@
 #include "../samples/common.hpp"
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -91,7 +92,7 @@ struct LoadWaiter : ultralight::LoadListener {
     bool ready = false;
     explicit LoadWaiter(ultralight::View *view) : view(view) { view->set_load_listener(this); }
     ~LoadWaiter() { view->set_load_listener(nullptr); }
-    void OnDOMReady(ultralight::View *, unsigned long long, bool main_frame, const ultralight::String &) override {
+    void OnDOMReady(ultralight::View *, std::uint64_t, bool main_frame, const ultralight::String &) override {
         if (main_frame)
             ready = true;
     }
