@@ -11,6 +11,11 @@ jobs:
   cmake:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      # GLAD in the pinned vcpkg baseline still declares CMake 3.0 policies.
+      # Pass the compatibility setting to dependency builds as well as the main project.
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+      VCPKG_KEEP_ENV_VARS: CMAKE_POLICY_VERSION_MINIMUM
     strategy:
       fail-fast: false
       matrix:
