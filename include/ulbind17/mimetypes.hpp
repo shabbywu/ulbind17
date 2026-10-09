@@ -376,7 +376,7 @@ static constexpr frozen::unordered_map<frozen::string, const char *, 347> knownn
     {"zip", "application/zip"},
 };
 
-const char *getType(const char *extension) {
+inline const char *getType(const char *extension) {
     // if extension if full filename
     const char *dot = strrchr(extension, '.');
     if (dot) {
