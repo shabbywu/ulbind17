@@ -1,26 +1,14 @@
 #pragma once
-#ifdef min
-#define FROZEN_OLD_MIN min
+#pragma push_macro("min")
+#pragma push_macro("max")
 #undef min
-#endif
-
-#ifdef max
-#define FROZEN_OLD_MAX max
 #undef max
-#endif
 
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
 
-#ifdef FROZEN_OLD_MIN
-#define min FROZEN_OLD_MIN
-#undef FROZEN_OLD_MIN
-#endif
-
-#ifdef FROZEN_OLD_MAX
-#define max FROZEN_OLD_MAX
-#undef FROZEN_OLD_MAX
-#endif
+#pragma pop_macro("max")
+#pragma pop_macro("min")
 
 namespace ulbind17 {
 namespace mimetypes {

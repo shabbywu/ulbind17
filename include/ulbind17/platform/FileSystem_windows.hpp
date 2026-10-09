@@ -1,4 +1,7 @@
 #pragma once
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Ultralight/platform/FileSystem.h>
 #include <filesystem>
 #include <map>

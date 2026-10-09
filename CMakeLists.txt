@@ -23,6 +23,9 @@ target_include_directories(
                             ${CMAKE_CURRENT_LIST_DIR}/embedded)
 target_link_libraries(ulbind17_header INTERFACE ultralight-sdk)
 target_compile_features(ulbind17_header INTERFACE cxx_std_20)
+if(WIN32)
+  target_compile_definitions(ulbind17_header INTERFACE NOMINMAX)
+endif()
 add_library(ulbind17::header ALIAS ulbind17_header)
 
 add_library(ulbind17 INTERFACE)

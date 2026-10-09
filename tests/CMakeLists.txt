@@ -1,3 +1,9 @@
+add_executable(ulbind17_minmax_tests minmax.cpp minmax_undefined.cpp)
+target_include_directories(ulbind17_minmax_tests PRIVATE
+  "${ULBINDING_INCLUDE_DIR}" "${EXTRA_INCLUDE_DIR}")
+target_compile_features(ulbind17_minmax_tests PRIVATE cxx_std_20)
+add_test(NAME platform.minmax COMMAND ulbind17_minmax_tests)
+
 add_executable(ulbind17_bridge_tests bridge.cpp)
 target_link_libraries(ulbind17_bridge_tests PRIVATE ulbind17::ulbind17)
 target_compile_definitions(ulbind17_bridge_tests PRIVATE
