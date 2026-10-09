@@ -4,6 +4,7 @@
 #undef min
 #undef max
 
+#include <cstring>
 #include <frozen/string.h>
 #include <frozen/unordered_map.h>
 
@@ -366,7 +367,7 @@ static constexpr frozen::unordered_map<frozen::string, const char *, 347> knownn
 
 inline const char *getType(const char *extension) {
     // if extension if full filename
-    const char *dot = strrchr(extension, '.');
+    const char *dot = std::strrchr(extension, '.');
     if (dot) {
         if (dot != extension) {
             extension = dot;
