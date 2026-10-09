@@ -1,63 +1,27 @@
-#include <ulbind17/setup.hpp>
-#include <ulbind17/ulbind17.hpp>
+#include "../common.hpp"
 
-// the partial specialization of A is enabled via a template parameter
-///
-///  Welcome to Sample 3!
-///
-///  In this sample we'll show how to integrate C++ code with JavaScript.
-///
-///  We will introduce the DOMReady event and use it to bind some C++ callback to a JavaScript
-///  function on JavaScrip context. Later, when that callback is triggered, we will execute a script
-///  to call those c++ callback.
 void Sample3() {
-    /// Create the Renderer
-    RefPtr<Renderer> renderer = Renderer::Create();
-    ViewConfig cfg;
-    /// Create View
-    auto view = renderer->CreateView(0, 0, cfg, nullptr);
-
-    std::cout << std::endl;
-    /// Finnaly get the js context
-    auto ctx = view->LockJSContext();
-
-    /// GlobalObject is also known as `window` in JavaScript
-    auto window = ulbind17::detail::Object::GetGlobalObject(ctx->ctx());
-    auto object = ulbind17::detail::Object(ctx->ctx());
-    window.set("object", object);
-    object.set(0, std::string("s0"));
-    object.set(1, 1);
+    sample::Fixture fixture;
+    ulbind17::js::Context context(fixture.view.get());
+    auto object = context.MakeObject();
+    object[0] = std::string("s0");
+    object[1] = 1;
     object[2] = 2.2;
-    object.set(4, ulbind17::detail::Undefined(ctx->ctx()));
-    object.set(5, nullptr);
+    object[4] = ulbind17::js::undefined;
+    object[5] = ulbind17::js::null;
     object["六"] = true;
-    object.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
-    window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
+    object["logInfo"] = context.MakeFunction("logInfo", [](std::string message) { std::cout << message << '\n'; });
+    sample::take(context.GlobalObject().SetProperty("object", object));
 
-    std::cout << "Object.size: " << object.size() << std::endl;
-    assert(object.size() == 7);
-    std::cout << "keys: ";
-    for (auto k : object.keys()) {
-        std::cout << k << " ";
-    }
-    std::cout << "\n";
-
-    ulbind17::detail::Script script(ctx->ctx(), R"(
-        logInfo("" + object)
-        object[0] = 0
-        object.logInfo("also work")
-        logInfo("" + object)
-    )");
-    script.Evaluate<void>();
-    assert(object.get<int>(0) == 0);
-    assert(object.get<bool>("六"));
-    std::cout << "object[0]: " << object.get<int>("0") << std::endl;
+    sample::check(sample::take(ulbind17::size(object)) == 7, "object size failed");
+    sample::check(sample::take(ulbind17::get<bool>(object, "六")), "UTF-8 key failed");
+    sample::take(context.Evaluate("object[0] = 0; object.logInfo('native object callback')"));
+    sample::check(sample::take(ulbind17::get<int>(object, "0")) == 0, "page mutation was not observed");
+    for (const auto &key : sample::take(ulbind17::keys(object)))
+        std::cout << key << ' ';
+    std::cout << '\n';
 }
 
 int main() {
-    ulbind17::setup_ultralight_platform();
-    Sample3();
-
-    std::cin.get();
-    return 0;
+    return sample::run(Sample3);
 }
