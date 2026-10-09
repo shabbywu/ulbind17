@@ -36,7 +36,7 @@ jobs:
             os: macos-15
             triplet: arm64-osx
             env: {}
-            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64']"
+            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64', '-DULBIND17_ALLOW_UNAVAILABLE_GRAPHICS=ON']"
 
     steps:
       - uses: actions/checkout@v4

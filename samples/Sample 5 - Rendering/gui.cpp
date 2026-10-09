@@ -42,9 +42,23 @@ static void mouse_button_callback(GLFWwindow *window, int button, int action, in
     static_cast<View *>(glfwGetWindowUserPointer(window))->FireMouseEvent(event);
 }
 
-int showGUI(RefPtr<Renderer> &renderer, RefPtr<View> &view, bool smoke) {
+static int graphics_failure(const char *operation, bool allow_unavailable) {
+    const char *description = nullptr;
+    int error = glfwGetError(&description);
+    bool unavailable = error == GLFW_API_UNAVAILABLE || error == GLFW_VERSION_UNAVAILABLE ||
+                       error == GLFW_FORMAT_UNAVAILABLE || error == GLFW_PLATFORM_UNAVAILABLE ||
+                       error == GLFW_PLATFORM_ERROR;
+    bool skip = allow_unavailable && unavailable;
+    std::cerr << (skip ? "SKIP: " : "ERROR: ") << operation << " failed (GLFW " << error << "): "
+              << (description ? description : "no error description") << '\n';
+    return skip ? sample::skip_unavailable_graphics : -1;
+}
+
+int showGUI(RefPtr<Renderer> &renderer, RefPtr<View> &view, bool smoke, bool allow_unavailable) {
+    // Interactive use and the default smoke test always require working graphics.
+    allow_unavailable = smoke && allow_unavailable;
     if (!glfwInit())
-        return -1;
+        return graphics_failure("glfwInit", allow_unavailable);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -55,20 +69,24 @@ int showGUI(RefPtr<Renderer> &renderer, RefPtr<View> &view, bool smoke) {
 #endif
     GLFWwindow *window = glfwCreateWindow(800, 450, "ulbind17 / Ultralight 2.0", nullptr, nullptr);
     if (!window) {
+        int status = graphics_failure("glfwCreateWindow (OpenGL 3.3 core)", allow_unavailable);
         glfwTerminate();
-        return -1;
+        return status;
     }
     struct Cleanup {
         GLFWwindow *window;
         ~Cleanup() { glfwDestroyWindow(window); glfwTerminate(); }
     } cleanup {window};
     glfwMakeContextCurrent(window);
+    if (glfwGetCurrentContext() != window)
+        return graphics_failure("glfwMakeContextCurrent", allow_unavailable);
     glfwSwapInterval(1);
     glfwSetWindowUserPointer(window, view.get());
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, cursor_position_callback);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+        std::cerr << "ERROR: gladLoadGLLoader failed after creating the OpenGL context\n";
         return -1;
     }
     int width, height;

@@ -10,6 +10,7 @@
 #include <utility>
 
 namespace sample {
+inline constexpr int skip_unavailable_graphics = 77;
 namespace js = ulbind17::js;
 using ultralight::RefPtr;
 using ultralight::Renderer;

@@ -35,6 +35,7 @@ ctest --test-dir build/local --output-on-failure
 | `BUILD_TESTING` | 作为顶层项目时为 ON | 构建四个控制台示例和回归测试 |
 | `ENABLE_TEST` | OFF | 构建全部五个示例 |
 | `ULBIND17_BUILD_RENDERING_SAMPLE` | `ENABLE_TEST` 的值 | 单独控制 GLFW/GLAD 渲染示例的构建 |
+| `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS` | OFF | 图形环境不可用时，允许 CTest 将渲染冒烟测试标记为跳过 |
 
 控制台测试不依赖 GLFW 或 GLAD。构建 Sample5 时，可以设置 `VCPKG_ROOT` 后使用项目的
 vcpkg 预设，也可以自行提供已安装的 GLFW/GLAD CMake 包：
@@ -49,6 +50,10 @@ ctest --test-dir build/Darwin -C Release --output-on-failure
 Sample5 提供带超时限制的 `--smoke-test`，通过隐藏窗口检查 OpenGL 像素颜色，
 并验证鼠标点击能触发 C++ 回调。运行它需要桌面会话；Linux 上可以使用
 `xvfb-run -a ctest --test-dir build/Linux --output-on-failure` 运行包含图形示例的测试。
+macOS CI 启用 `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS`：若 GLFW 无法初始化图形环境或创建
+OpenGL 上下文，测试输出具体错误并以退出码 77 标记为 `Skipped`。默认本地测试仍要求图形环境可用；
+也可显式运行 `Sample5 --smoke-test --allow-unavailable-graphics` 使用相同行为。
+上下文创建后的加载器、像素检查和点击回调错误仍会导致测试失败。Linux CI 在 Xvfb 下执行实际渲染检查。
 
 ## 在其他 CMake 项目中使用
 

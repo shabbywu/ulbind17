@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_TESTING "Build ulbind17 regression tests" ${PROJECT_IS_TOP_LEVEL})
 include(CTest)
 option(ULBIND17_BUILD_RENDERING_SAMPLE "Build the GLFW/GLAD rendering sample" ${ENABLE_TEST})
+option(ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS "Allow the GUI smoke test to skip when graphics are unavailable" OFF)
 
 set(ULBINDING_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/externals/include)

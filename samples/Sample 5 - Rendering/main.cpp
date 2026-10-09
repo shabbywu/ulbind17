@@ -1,8 +1,9 @@
 #include "../common.hpp"
 
-int showGUI(sample::RefPtr<sample::Renderer> &renderer, sample::RefPtr<sample::View> &view, bool smoke);
+int showGUI(sample::RefPtr<sample::Renderer> &renderer, sample::RefPtr<sample::View> &view, bool smoke,
+            bool allow_unavailable);
 
-void Sample5(bool smoke) {
+int Sample5(bool smoke, bool allow_unavailable) {
     sample::Fixture fixture;
     fixture.view->Resize(800, 450);
     int clicks = 0;
@@ -102,12 +103,30 @@ void Sample5(bool smoke) {
     )");
 
 
-    sample::check(showGUI(fixture.renderer, fixture.view, smoke) == 0, "GLFW rendering failed");
+    int status = showGUI(fixture.renderer, fixture.view, smoke, allow_unavailable);
+    if (status == sample::skip_unavailable_graphics)
+        return status;
+    sample::check(status == 0, "GLFW rendering failed");
     if (smoke)
         sample::check(clicks == 1, "mouse click did not call the native API exactly once");
+    return 0;
 }
 
 int main(int argc, char **argv) {
-    bool smoke = argc > 1 && std::string(argv[1]) == "--smoke-test";
-    return sample::run([&] { Sample5(smoke); });
+    int status = 0;
+    int failure = sample::run([&] {
+        bool smoke = false, allow_unavailable = false;
+        for (int i = 1; i < argc; ++i) {
+            std::string argument(argv[i]);
+            if (argument == "--smoke-test")
+                smoke = true;
+            else if (argument == "--allow-unavailable-graphics")
+                allow_unavailable = true;
+            else
+                throw std::runtime_error("Unknown argument: " + argument);
+        }
+        sample::check(smoke || !allow_unavailable, "--allow-unavailable-graphics requires --smoke-test");
+        status = Sample5(smoke, allow_unavailable);
+    });
+    return failure ? failure : status;
 }
