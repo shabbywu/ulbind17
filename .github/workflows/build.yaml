@@ -45,7 +45,10 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13 libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev xvfb
+          sudo apt-get install -qqq \
+            build-essential pkg-config gcc-13 g++-13 \
+            autoconf autoconf-archive automake libtool \
+            libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev xvfb
       - uses: lukka/run-vcpkg@v11
         with:
           runVcpkgInstall: false
