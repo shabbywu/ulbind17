@@ -1,60 +1,76 @@
-cmake_minimum_required(VERSION 3.22)
-project(ultralight-sdk)
-include(FetchContent)
+set(ULTRALIGHT_SDK_ROOT "" CACHE PATH "Path to an extracted Ultralight 2.x SDK")
+set(ULTRALIGHT_SDK_VERSION "latest" CACHE STRING "Ultralight SDK package version to download")
+set(ULTRALIGHT_SDK_API_URL "https://ultralig.ht/api/v1/sdk" CACHE STRING "Ultralight SDK API endpoint")
 
-message(STATUS "downloading ultralight-sdk...")
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  file(
-    DOWNLOAD
-    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-linux-x64.7z
-    ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-    SHOW_PROGRESS
-    EXPECTED_MD5 cc03958cf6a4468c4a70ce8f3ff913b9)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-  file(
-    DOWNLOAD
-    https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-win-x64.7z
-    ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-    SHOW_PROGRESS
-    EXPECTED_MD5 83d9321cf36e5ab15eef3151b3ab5576)
-
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-  if(CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
-    file(
-      DOWNLOAD
-      https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-x64.7z
-      ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-      SHOW_PROGRESS
-      EXPECTED_MD5 69ff45ed6f190e734163a6f9815681c7)
-  else()
-    file(
-      DOWNLOAD
-      https://ultralight-sdk-dev.sfo2.cdn.digitaloceanspaces.com/ultralight-sdk-min-latest-mac-arm64.7z
-      ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-      SHOW_PROGRESS
-      EXPECTED_MD5 5d3b2477ccf7e12ec02ef7f91ce33813)
-  endif()
-else()
-  message(FATAL_ERROR "Not implemented support for ${CMAKE_SYSTEM_NAME}")
+include(${CMAKE_CURRENT_LIST_DIR}/SDK.cmake)
+ulbind17_sdk_platform(_sdk_platform)
+if(NOT TARGET Ultralight::Ultralight)
+  set(_promote_imports TRUE)
 endif()
 
-file(ARCHIVE_EXTRACT INPUT ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk.7z
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk)
+if(ULTRALIGHT_SDK_ROOT)
+  set(Ultralight_DIR "${ULTRALIGHT_SDK_ROOT}/lib/cmake/Ultralight" CACHE PATH "Ultralight package" FORCE)
+  find_package(Ultralight 2 CONFIG REQUIRED
+    PATHS "${ULTRALIGHT_SDK_ROOT}/lib/cmake/Ultralight" NO_DEFAULT_PATH)
+elseif((Ultralight_DIR AND NOT Ultralight_DIR STREQUAL ULBIND17_DOWNLOADED_SDK_DIR)
+    OR TARGET Ultralight::Ultralight)
+  find_package(Ultralight 2 CONFIG REQUIRED)
+else()
+  if(NOT ULBIND17_DOWNLOADED_SDK_DIR)
+    find_package(Ultralight 2 CONFIG QUIET)
+  endif()
+  if(NOT Ultralight_FOUND)
+    ulbind17_download_sdk(_sdk_root "${_sdk_platform}" "${ULTRALIGHT_SDK_VERSION}"
+      "${CMAKE_CURRENT_BINARY_DIR}/sdk-cache")
+    set(Ultralight_DIR "${_sdk_root}/lib/cmake/Ultralight" CACHE PATH "Ultralight package" FORCE)
+    find_package(Ultralight 2 CONFIG REQUIRED
+      PATHS "${_sdk_root}/lib/cmake/Ultralight" NO_DEFAULT_PATH)
+    set(ULBIND17_DOWNLOADED_SDK_DIR "${Ultralight_DIR}" CACHE INTERNAL "Automatically downloaded SDK" FORCE)
+  endif()
+endif()
+
+if(_promote_imports)
+  foreach(_library IN ITEMS UltralightCore WebCore Ultralight AppCore)
+    set_target_properties(Ultralight::${_library} PROPERTIES IMPORTED_GLOBAL TRUE)
+  endforeach()
+endif()
+
+if(NOT ULTRALIGHT_VERSION MATCHES "^2\\.")
+  message(FATAL_ERROR "ulbind17 requires an Ultralight 2.x SDK; found ${ULTRALIGHT_VERSION}")
+endif()
+get_filename_component(_sdk_root "${ULTRALIGHT_INCLUDE_DIR}/.." ABSOLUTE)
+file(READ "${_sdk_root}/VERSION.txt" _package_version)
+string(STRIP "${_package_version}" _package_version)
+message(STATUS "Ultralight SDK: ${_package_version} (${_sdk_root})")
 
 add_library(ultralight-sdk INTERFACE)
-target_link_directories(
-  ultralight-sdk INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin"
-  "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/lib")
-target_include_directories(
-  ultralight-sdk INTERFACE "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/include")
-target_link_libraries(ultralight-sdk INTERFACE UltralightCore Ultralight
-                                               WebCore)
-set_target_properties(
-  ultralight-sdk
-  PROPERTIES ULTRALIGHT_BINARY_DIR
-             "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/bin"
-             ULTRALIGHT_INSPECTOR_DIR
-             "${CMAKE_CURRENT_BINARY_DIR}/ultralight-sdk/inspector")
-
+target_link_libraries(ultralight-sdk INTERFACE Ultralight::Ultralight)
+set_target_properties(ultralight-sdk PROPERTIES
+  ULTRALIGHT_BINARY_DIR "${ULTRALIGHT_BINARY_DIR}"
+  ULTRALIGHT_INSPECTOR_DIR "${ULTRALIGHT_INSPECTOR_DIR}")
 add_library(ultralight-sdk-fullstack INTERFACE)
-target_link_libraries(ultralight-sdk-fullstack INTERFACE ultralight-sdk AppCore)
+target_link_libraries(ultralight-sdk-fullstack INTERFACE ultralight-sdk Ultralight::AppCore)
+
+foreach(_variable IN ITEMS ULTRALIGHT_INCLUDE_DIR ULTRALIGHT_BINARY_DIR ULTRALIGHT_RESOURCES_DIR)
+  set(${_variable} "${${_variable}}" PARENT_SCOPE)
+endforeach()
+
+# Embedded applications only need the libraries, not a second copy of the data files.
+function(ulbind17_copy_runtime_files target)
+  foreach(_library IN ITEMS UltralightCore WebCore Ultralight AppCore)
+    get_target_property(_library_type Ultralight::${_library} TYPE)
+    if(_library_type STREQUAL "SHARED_LIBRARY")
+      add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "$<TARGET_FILE:Ultralight::${_library}>" "$<TARGET_FILE_DIR:${target}>"
+        VERBATIM)
+    endif()
+  endforeach()
+  if(APPLE)
+    set_target_properties(${target} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "@executable_path/")
+  elseif(UNIX)
+    set_target_properties(${target} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH TRUE INSTALL_RPATH "$ORIGIN")
+  endif()
+endfunction()
