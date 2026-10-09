@@ -3,6 +3,7 @@
 #include "shader.hpp"
 
 #include <Ultralight/Ultralight.h>
+#include <stdexcept>
 
 namespace render {
 namespace bitmap {
@@ -53,7 +54,7 @@ class BitmapRender {
         //  Set OpenGL options
         glEnable(GL_CULL_FACE);
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
         // Configure VAO/VBO/EBO for texture quads
         glGenVertexArrays(1, &VAO);
@@ -87,6 +88,10 @@ class BitmapRender {
     }
     ~BitmapRender() {
         glDeleteTextures(1, &TextureID);
+        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &EBO);
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteProgram(shader.ID);
     }
     void Render(float leftBottomX, float leftBottomY, float rightTopX, float rightTopY) {
         // Activate corresponding render state
@@ -122,6 +127,8 @@ class BitmapRender {
     }
 
     void Update(ultralight::RefPtr<ultralight::Bitmap> bitmap) {
+        if (bitmap->format() != ultralight::BitmapFormat::BGRA8_UNORM_SRGB)
+            throw std::runtime_error("Expected a BGRA8 CPU bitmap");
         shader.use();
 
         GLfloat projection[4][4] = {{2.0f / bitmap->width(), 0, 0, 0},
@@ -132,8 +139,10 @@ class BitmapRender {
 
         void *pixels = bitmap->LockPixels();
         glBindTexture(GL_TEXTURE_2D, TextureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap->width(), bitmap->height(), 0, GL_RGBA, GL_UNSIGNED_BYTE,
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->row_bytes() / 4);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bitmap->width(), bitmap->height(), 0, GL_BGRA, GL_UNSIGNED_BYTE,
                      pixels);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         bitmap->UnlockPixels();
     }
 };

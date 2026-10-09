@@ -1,26 +1,15 @@
-#include <Ultralight/Ultralight.h>
-#include <ulbind17/setup.hpp>
-#include <ulbind17/ulbind17.hpp>
+#include "../common.hpp"
 
-int showGUI(RefPtr<Renderer> &render, RefPtr<View> &view);
+int showGUI(sample::RefPtr<sample::Renderer> &renderer, sample::RefPtr<sample::View> &view, bool smoke);
 
-// the partial specialization of A is enabled via a template parameter
-///
-///  Welcome to Sample 5!
-///
-///  In this sample we'll show how to integrate C++ code with JavaScript.
-///
-///  We will introduce the DOMReady event and use it to bind some C++ callback to a JavaScript
-///  function on JavaScrip context. Later, when that callback is triggered, we will execute a script
-///  to call those c++ callback.
-void Sample5() {
-    /// Create the Renderer
-    RefPtr<Renderer> renderer = Renderer::Create();
-    ViewConfig cfg;
-    cfg.is_accelerated = false;
-    /// Create View
-    auto view = renderer->CreateView(800, 450, cfg, nullptr);
-    view->LoadHTML(R"(
+void Sample5(bool smoke) {
+    sample::Fixture fixture;
+    fixture.view->Resize(800, 450);
+    int clicks = 0;
+    ulbind17::js::API api("app");
+    api["logInfo"] = [&clicks](std::string message) { ++clicks; std::cout << message << '\n'; };
+    sample::check(api.AttachTo(fixture.view.get()), "AttachTo failed");
+    fixture.view->LoadHTML(R"(
 <!DOCTYPE html>
 <html>
 <head>
@@ -99,11 +88,11 @@ void Sample5() {
 <p>Use the :hover selector to change the style of the button when you move the mouse over it.</p>
 <p><strong>Tip:</strong> Use the transition-duration property to determine the speed of the "hover" effect:</p>
 
-<button class="button button1" onclick="logInfo('click green');">Green</button>
-<button class="button button2" onclick="logInfo('click Blue');">Blue</button>
-<button class="button button3" onclick="logInfo('click Red');">Red</button>
-<button class="button button4" onclick="logInfo('click Gray');">Gray</button>
-<button class="button button5" onclick="logInfo('click Black');">Black</button>
+<button class="button button1" onclick="app.logInfo('click green');">Green</button>
+<button class="button button2" onclick="app.logInfo('click Blue');">Blue</button>
+<button class="button button3" onclick="app.logInfo('click Red');">Red</button>
+<button class="button button4" onclick="app.logInfo('click Gray');">Gray</button>
+<button class="button button5" onclick="app.logInfo('click Black');">Black</button>
 
 </body>
 </html>
@@ -112,31 +101,13 @@ void Sample5() {
 
     )");
 
-    std::cout << std::endl;
-    /// Finnaly get the js context
-    auto ctx = view->LockJSContext();
 
-    /// GlobalObject is also known as `window` in JavaScript
-    auto window = ulbind17::detail::Object::GetGlobalObject(ctx->ctx());
-
-    // TODO:
-    // 1. create an jsobject as class constructor
-    // 2. support to defined constructor at cpp
-
-    window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
-
-    try {
-        showGUI(renderer, view);
-    }
-    catch (const std::exception &e) {
-        std::cerr << e.what() << std::endl;
-    }
+    sample::check(showGUI(fixture.renderer, fixture.view, smoke) == 0, "GLFW rendering failed");
+    if (smoke)
+        sample::check(clicks == 1, "mouse click did not call the native API exactly once");
 }
 
-int main() {
-    ulbind17::setup_ultralight_platform();
-    Sample5();
-
-    std::cin.get();
-    return 0;
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && std::string(argv[1]) == "--smoke-test";
+    return sample::run([&] { Sample5(smoke); });
 }

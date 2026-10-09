@@ -6,6 +6,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <vector>
 #include <ulbind17/mimetypes.hpp>
 
 namespace ulbind17 {
@@ -47,7 +48,7 @@ class FileSystem : public ultralight::FileSystem {
     }
 
     virtual ultralight::RefPtr<ultralight::Buffer> OpenFile(const ultralight::String &file_path) override {
-        std::filesystem::path path = file_path.utf8().data();
+        auto path = rootdir / file_path.utf8().data();
 
         std::unique_ptr<std::ifstream> file(new std::ifstream(path, std::ifstream::ate | std::ifstream::binary));
         if (!file->good())

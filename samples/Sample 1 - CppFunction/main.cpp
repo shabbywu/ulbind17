@@ -1,7 +1,5 @@
-#include <ulbind17/setup.hpp>
-#include <ulbind17/ulbind17.hpp>
-
-// the partial specialization of A is enabled via a template parameter
+#include "../common.hpp"
+#include <functional>
 
 std::string vanilla() {
     return "vanilla c++ function is ok";
@@ -15,54 +13,33 @@ struct A {
     }
 };
 
-///
-///  Welcome to Sample 1!
-///
-///  In this sample we'll show how to integrate C++ code with JavaScript.
-///
-///  We will introduce the DOMReady event and use it to bind some C++ callback to a JavaScript
-///  function on JavaScrip context. Later, when that callback is triggered, we will execute a script
-///  to call those c++ callback.
 void Sample1() {
-    /// Create the Renderer
-    RefPtr<Renderer> renderer = Renderer::Create();
-    ViewConfig cfg;
-    /// Create View
-    auto view = renderer->CreateView(0, 0, cfg, nullptr);
-
-    std::cout << std::endl;
-    /// Finnaly get the js context
-    auto ctx = view->LockJSContext();
-
-    /// GlobalObject is also known as `window` in JavaScript
-    auto window = ulbind17::detail::Object::GetGlobalObject(ctx->ctx());
-    window.set("lambda", 1);
-
-    ulbind17::detail::generic_cast<int, JSValueRef>(ctx->ctx(), 1);
-    ulbind17::detail::generic_cast<std::string, JSValueRef>(ctx->ctx(), "");
-
-    window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
-    window.bindFunc("lambda", [](std::string who) { return std::string("hello ") + who; });
-
-    std::string secret = "secret can't access by javascript???";
-    window.bindFunc("lambdaCapture", [&]() { return secret; });
-    window.bindFunc("vanilla", &vanilla);
+    sample::Fixture fixture;
+    std::string secret = "native capture";
     A a;
-    window.bindFunc("addJ", std::function<double(int)>(std::bind(&A::add, &a, std::placeholders::_1)));
+    ulbind17::js::API api("app");
+    api["logInfo"] = [](std::string message) { std::cout << message << '\n'; };
+    api["hello"] = [](std::string who) { return std::string("hello ") + who; };
+    api["capture"] = [&secret]() { return secret; };
+    api["vanilla"] = &vanilla;
+    api["addJ"] = ulbind17::js::Bind(&a, &A::add);
+    api["function"] = std::function<int(int)>([](int value) { return value * 2; });
+    sample::check(api.AttachTo(fixture.view.get()), "AttachTo failed");
 
-    ulbind17::detail::Script script(ctx->ctx(), R"(
-        logInfo("call lambda: " + lambda("world"))
-        logInfo("call lambdaCapture: " + lambdaCapture())
-        logInfo("call vanilla: " + vanilla())
-        logInfo("call addJ: " + addJ(3))
-    )");
-    script.Evaluate<void>();
+    ulbind17::js::Context context(fixture.view.get());
+    sample::check(sample::take(context.Evaluate<std::string>("app.hello('world')")) == "hello world",
+                  "lambda binding failed");
+    sample::check(sample::take(context.Evaluate<std::string>("app.capture()")) == secret,
+                  "capture binding failed");
+    sample::check(sample::take(context.Evaluate<std::string>("app.vanilla()")) == vanilla(),
+                  "free function binding failed");
+    sample::check(sample::take(context.Evaluate<double>("app.addJ(3)")) == 4.1, "member binding failed");
+    sample::check(sample::take(context.Evaluate<int>("app.function(4)")) == 8, "std::function binding failed");
+    auto bad = context.Evaluate("app.addJ('three')");
+    sample::check(!bad && bad.error().code() == "ULJS_BAD_ARG", "wrong arguments must fail");
+    sample::take(context.Evaluate("app.logInfo(app.hello('world'))"));
 }
 
 int main() {
-    ulbind17::setup_ultralight_platform();
-    Sample1();
-
-    std::cin.get();
-    return 0;
+    return sample::run(Sample1);
 }

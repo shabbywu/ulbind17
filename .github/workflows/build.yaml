@@ -1,13 +1,10 @@
 name: Build
 on:
   workflow_dispatch:
-
-env:
-  # Only used for the cache key. Increment version to force clean build.
-  GODOT_BASE_BRANCH: main
+  pull_request:
 
 concurrency:
-  group: ci-${{github.actor}}-${{github.head_ref || github.run_number}}-${{github.ref}}
+  group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -15,59 +12,53 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-        - name: 🏁 Build (Windows, MSVC, CMake)
-          preset: default
-          artifact: windows
-          os: windows-2022
-          env: {}
-          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
-        - name: 🐧 Build (Linux, GCC, CMake)
-          preset: default
-          artifact: linux
-          os: ubuntu-24.04
-          env:
-            CC:   gcc-13
-            CXX:  g++-13
-          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON']"
-        - name: 🍎 Build (MacOS, x86_64, CMake)
-          preset: default
-          artifact: macos-x86_64
-          os: macos-latest
-          env: {}
-          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"x86_64\"']"
-        - name: 🍎 Build (MacOS, arm64, CMake)
-          preset: default
-          artifact: macos-arm64
-          os: macos-latest
-          env: {}
-          configurePresetAdditionalArgs: "['-DENABLE_TEST=ON', '-DCMAKE_OSX_ARCHITECTURES=\"arm64\"']"
+          - name: Windows x64 / MSVC
+            os: windows-2022
+            triplet: x64-windows
+            env: {}
+            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release']"
+          - name: Linux x64 / GCC
+            os: ubuntu-24.04
+            triplet: x64-linux
+            env:
+              CC: gcc-13
+              CXX: g++-13
+            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release']"
+          - name: macOS arm64 / Clang
+            os: macos-15
+            triplet: arm64-osx
+            env: {}
+            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64']"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      # Install latest CMake and Ninja.
+      - uses: actions/checkout@v4
       - uses: lukka/get-cmake@latest
-
-      - name: 🐧 Install dependencies
+      - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13 libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev pkg-config
-
-      - name: Setup anew (or from cache) vcpkg (and does not build any package)
-        uses: lukka/run-vcpkg@v11 # Always specify the specific _version_ of the
-                                  # action you need, `v11` in this case to stay up
-                                  # to date with fixes on the v11 branch.
-
-      - name: Run CMake consuming CMakePreset.json and run vcpkg to build packages
-        uses: lukka/run-cmake@v10
+          sudo apt-get install -qqq build-essential pkg-config gcc-13 g++-13 libxinerama-dev libxcursor-dev xorg-dev libglu1-mesa-dev xvfb
+      - uses: lukka/run-vcpkg@v11
         with:
-          configurePreset: ${{ matrix.preset }}
-          configurePresetAdditionalArgs: ${{ matrix.configurePresetAdditionalArgs }}
-          buildPreset: ${{ matrix.preset }}
-        env: ${{ matrix.env }}
+          runVcpkgInstall: false
+      - uses: lukka/run-cmake@v10
+        with:
+          configurePreset: default
+          configurePresetAdditionalArgs: ${{ matrix.args }}
+          buildPreset: default
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+          CC: ${{ matrix.env.CC }}
+          CXX: ${{ matrix.env.CXX }}
+      - name: Test Linux (including hidden-window GUI smoke)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a ctest --test-dir build/Linux -C Release --output-on-failure
+      - name: Test Windows
+        if: runner.os == 'Windows'
+        run: ctest --test-dir build/Windows -C Release --output-on-failure
+      - name: Test macOS
+        if: runner.os == 'macOS'
+        run: ctest --test-dir build/Darwin -C Release --output-on-failure
