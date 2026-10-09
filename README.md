@@ -54,6 +54,7 @@ macOS CI 启用 `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS`：若 GLFW 无法初始化
 OpenGL 上下文，测试输出具体错误并以退出码 77 标记为 `Skipped`。默认本地测试仍要求图形环境可用；
 也可显式运行 `Sample5 --smoke-test --allow-unavailable-graphics` 使用相同行为。
 上下文创建后的加载器、像素检查和点击回调错误仍会导致测试失败。Linux CI 在 Xvfb 下执行实际渲染检查。
+Windows CI 编译 Sample5，并在运行 CTest 时排除 `Sample5.smoke`；本地仍可手动运行该测试。
 
 ## 在其他 CMake 项目中使用
 
