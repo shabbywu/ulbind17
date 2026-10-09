@@ -1,68 +1,39 @@
-#include <ulbind17/setup.hpp>
-#include <ulbind17/types/jsiterator.hpp>
-#include <ulbind17/ulbind17.hpp>
+#include "../common.hpp"
+#include <vector>
 
-using namespace ulbind17;
-
-// the partial specialization of A is enabled via a template parameter
-///
-///  Welcome to Sample 2!
-///
-///  In this sample we'll show how to integrate C++ code with JavaScript.
-///
-///  We will introduce the DOMReady event and use it to bind some C++ callback to a JavaScript
-///  function on JavaScrip context. Later, when that callback is triggered, we will execute a script
-///  to call those c++ callback.
 void Sample2() {
-    /// Create the Renderer
-    RefPtr<Renderer> renderer = Renderer::Create();
-    ViewConfig cfg;
-    /// Create View
-    auto view = renderer->CreateView(0, 0, cfg, nullptr);
-
-    std::cout << std::endl;
-    /// Finnaly get the js context
-    auto ctx = view->LockJSContext();
-
-    /// GlobalObject is also known as `window` in JavaScript
-    auto window = ulbind17::detail::Object::GetGlobalObject(ctx->ctx());
-    auto array = ulbind17::detail::Array(ctx->ctx());
-    window.set("array", array);
-    array.set(0, std::string("s0"));
-    array.set(1, 1);
+    sample::Fixture fixture;
+    ulbind17::js::Context context(fixture.view.get());
+    auto array = context.MakeArray({});
+    array[0] = std::string("s0");
+    array[1] = 1;
     array[2] = 2.2;
-    array.set(4, ulbind17::detail::Undefined(ctx->ctx()));
-    array.set(5, nullptr);
-    array.set(6, true);
-    window.bindFunc("logInfo", [](std::string message) { std::cout << message << std::endl; });
+    // Index 3 remains a hole; index 4 exists and contains undefined.
+    array[4] = ulbind17::js::undefined;
+    array[5] = ulbind17::js::null;
+    array[6] = true;
+    sample::take(context.GlobalObject().SetProperty("array", array));
 
-    auto it = ulbind17::detail::Iterator(ctx->ctx(), array.get<ulbind17::detail::Function<JSObjectRef()>>("keys")());
-    std::cout << "it: " << it.toString() << std::endl;
-    {
-        auto o = it.next();
-        std::cout << "o.value: " << o.get<int>("value") << std::endl;
-        assert(o.get<int>("value") == 0);
+    sample::check(sample::take(ulbind17::size(array)) == 7, "array length must include holes");
+    sample::check(!array.Has("3") && array.Has("4"), "hole and undefined must remain distinct");
+    sample::check(sample::take(ulbind17::get<ulbind17::js::Value>(array, 4)).IsUndefined(), "undefined lost");
+    sample::check(sample::take(ulbind17::get<ulbind17::js::Value>(array, 5)).IsNull(), "null lost");
+    sample::check(sample::take(ulbind17::get<bool>(array, 6)), "boolean lost");
+    sample::check(sample::take(ulbind17::keys(array)) ==
+                      std::vector<std::string>({"0", "1", "2", "4", "5", "6"}),
+                  "array key enumeration failed");
 
-        o = it.next();
-        std::cout << "o.value: " << o.get<int>("value") << std::endl;
-        assert(o.get<int>("value") == 1);
-    }
-
-    ulbind17::detail::Script script(ctx->ctx(), R"(
-        logInfo("" + array) // "s0,1,2.2,,s4"
-        array[0] = 0
-        logInfo("" + array) // "0,1,2.2,,s4"
-    )");
-    script.Evaluate<void>();
-    assert(array.get<int>(0) == 0);
-    std::cout << "array[0]: " << array.get<int>(0) << std::endl;
-    std::cout << "array.size = " << array.size() << std::endl;
+    auto iterator = sample::take(array["keys"].Invoke<ulbind17::js::Value>());
+    auto first = sample::take(iterator["next"].Invoke<ulbind17::js::Value>());
+    auto second = sample::take(iterator["next"].Invoke<ulbind17::js::Value>());
+    sample::check(sample::take(ulbind17::get<int>(first, "value")) == 0 &&
+                      sample::take(ulbind17::get<int>(second, "value")) == 1,
+                  "iterator failed");
+    sample::take(context.Evaluate("array[0] = 0"));
+    sample::check(sample::take(ulbind17::get<int>(array, 0)) == 0, "page mutation was not observed");
+    std::cout << "array length: " << sample::take(ulbind17::size(array)) << '\n';
 }
 
 int main() {
-    ulbind17::setup_ultralight_platform();
-    Sample2();
-
-    std::cin.get();
-    return 0;
+    return sample::run(Sample2);
 }

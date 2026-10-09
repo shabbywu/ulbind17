@@ -1,69 +1,36 @@
-#include <ulbind17/setup.hpp>
-#include <ulbind17/ulbind17.hpp>
+#include "../common.hpp"
 
 class A {
   public:
-    int i;
-    A() {
-        i = 0;
-    }
+    int i = 0;
 
-    double method(int time, std::string message) {
-        for (int i = 0; i < time; i++) {
-            std::cout << "message: " << message << std::endl;
-        }
+    double method(int times, std::string message) {
+        for (int count = 0; count < times; ++count)
+            std::cout << message << '\n';
         return i * 2.1;
     }
 };
 
-// the partial specialization of A is enabled via a template parameter
-///
-///  Welcome to Sample 4!
-///
-///  In this sample we'll show how to integrate C++ code with JavaScript.
-///
-///  We will introduce the DOMReady event and use it to bind some C++ callback to a JavaScript
-///  function on JavaScrip context. Later, when that callback is triggered, we will execute a script
-///  to call those c++ callback.
 void Sample4() {
-    /// Create the Renderer
-    RefPtr<Renderer> renderer = Renderer::Create();
-    ViewConfig cfg;
-    /// Create View
-    auto view = renderer->CreateView(0, 0, cfg, nullptr);
-
-    std::cout << std::endl;
-    /// Finnaly get the js context
-    auto ctx = view->LockJSContext();
-
-    /// GlobalObject is also known as `window` in JavaScript
-    auto window = ulbind17::detail::Object::GetGlobalObject(ctx->ctx());
-
-    // TODO:
-    // 1. create an jsobject as class constructor
-    // 2. support to defined constructor at cpp
-    auto clazz =
-        ulbind17::detail::ClassDef<A>(ctx->ctx(), "A").defProperty("i", &A::i).bindFunc("method", &A::method).end();
+    sample::Fixture fixture;
     A a;
-    window.set("a", &a);
-    // window.set("A", clazz->rawref());
-    window.set("logInfo", [](std::string message) { std::cout << message << std::endl; });
-    ulbind17::detail::Script(ctx->ctx(), R"(
-        logInfo("a.i = " + a.i)
-        a.i++
-        a.method(3, "重要的事情说三遍");
-        logInfo(typeof logInfo);
-        return 1;
-    )")
-        .Evaluate<int>();
-    JSGarbageCollect(ctx->ctx());
-    std::cout << "after js\n> a.i = " << a.i << std::endl;
+    ulbind17::js::API api("app");
+    api.DefineClass<A>("A").Constructor<>().Field("i", &A::i).Method("method", &A::method);
+    // Borrowed instance: a must outlive every page call, or its wrappers must be detached.
+    api.BindProperty("a", [&a]() { return &a; });
+    sample::check(api.AttachTo(fixture.view.get()), "AttachTo failed");
+    ulbind17::js::Context context(fixture.view.get());
+    auto result = context.Evaluate<double>("app.a.i++; app.a.method(3, '重要的事情说三遍')");
+    sample::check(sample::take(std::move(result)) == 2.1 && a.i == 1, "borrowed class binding failed");
+    sample::check(sample::take(context.Evaluate<int>("const owned = new app.A(); owned.i = 7; owned.i")) == 7,
+                  "native constructor failed");
+    auto borrowed = context.Make(&a);
+    sample::take(context.GlobalObject().SetProperty("borrowed", borrowed));
+    ulbind17::js::Detach<A>(borrowed);
+    auto detached = context.Evaluate("borrowed.method(1, 'detached')");
+    sample::check(!detached && detached.error().code() == "ULJS_DETACHED", "detached instance must fail");
 }
 
 int main() {
-    ulbind17::setup_ultralight_platform();
-    Sample4();
-
-    std::cin.get();
-    return 0;
+    return sample::run(Sample4);
 }
