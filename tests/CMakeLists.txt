@@ -24,3 +24,13 @@ foreach(_case IN ITEMS cache checksum cached-checksum old-version platform downl
     "-DTEST_DIR=${CMAKE_CURRENT_BINARY_DIR}/sdk-${_case}"
     -P "${CMAKE_CURRENT_SOURCE_DIR}/sdk.cmake")
 endforeach()
+
+# The filesystem backend must link without the embedded SDK resource arrays.
+add_executable(ulbind17_filesystem_resources_tests sdk_resources_filesystem.cpp)
+target_link_libraries(ulbind17_filesystem_resources_tests PRIVATE ulbind17::header)
+target_compile_definitions(ulbind17_filesystem_resources_tests PRIVATE
+  "ULBIND17_SDK_RESOURCES=\"${ULTRALIGHT_RESOURCES_DIR}\"")
+ulbind17_copy_runtime_files(ulbind17_filesystem_resources_tests)
+add_test(NAME resources.filesystem COMMAND ulbind17_filesystem_resources_tests)
+set_tests_properties(resources.filesystem PROPERTIES TIMEOUT 20
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/isolated")

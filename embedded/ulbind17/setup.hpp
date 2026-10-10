@@ -2,7 +2,7 @@
 
 #include "fonts/AlimamaShuHeiTi-Bold.h"
 #include "fonts/FreeUniversal-Regular.h"
-#include "resources/sdk_resources.hpp"
+#include <ulbind17/resources/embedded/SDKResources.hpp>
 #include <Ultralight/Ultralight.h>
 #include <filesystem>
 #include <iostream>
@@ -27,35 +27,20 @@ class EmbeddedResourceFileSystem : public platform::FileSystem {
   public:
     explicit EmbeddedResourceFileSystem(std::filesystem::path rootdir,
                                         std::filesystem::path resource_dir = "resources/")
-        : platform::FileSystem(std::move(rootdir)), resource_dir_(std::move(resource_dir)) {}
+        : platform::FileSystem(std::move(rootdir)), sdk_resources_(std::move(resource_dir)) {}
 
     bool FileExists(const ultralight::String &file_path) override {
-        return resource(file_path).data || platform::FileSystem::FileExists(file_path);
+        return sdk_resources_.FileExists(file_path) || platform::FileSystem::FileExists(file_path);
     }
 
     ultralight::RefPtr<ultralight::Buffer> OpenFile(const ultralight::String &file_path) override {
-        auto data = resource(file_path);
-        if (data.data)
-            return ultralight::Buffer::Create(const_cast<unsigned char *>(data.data), data.size, nullptr, nullptr);
+        auto data = sdk_resources_.OpenFile(file_path);
+        if (data.get()) return data;
         return platform::FileSystem::OpenFile(file_path);
     }
 
   private:
-    struct Resource {
-        const unsigned char *data = nullptr;
-        std::size_t size = 0;
-    };
-
-    Resource resource(const ultralight::String &file_path) const {
-        std::filesystem::path path(file_path.utf8().data());
-        if (path.lexically_normal() == (resource_dir_ / "icudt67l.dat").lexically_normal())
-            return {resources::icudt67l_data, resources::icudt67l_size};
-        if (path.lexically_normal() == (resource_dir_ / "cacert.pem").lexically_normal())
-            return {resources::cacert_data, resources::cacert_size};
-        return {};
-    }
-
-    std::filesystem::path resource_dir_;
+    resources::embedded::SDKResources sdk_resources_;
 };
 
 namespace platform_detail {

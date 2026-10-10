@@ -172,6 +172,25 @@ api.DefineClass<Player>("Player")
 ICU 数据和证书从所选 SDK 生成到构建目录中，原有的内嵌字体继续保留。
 运行时资源查找遵循 `Config::resource_path_prefix`，不需要外部 `assets/resources` 目录。
 
+自定义文件系统可显式选择两种 SDK 资源来源，二者都提供 `FileExists()` 和 `OpenFile()`：
+
+```cpp
+#include <ulbind17/resources/embedded/SDKResources.hpp>
+#include <ulbind17/resources/filesystem/SDKResources.hpp>
+
+// 内嵌模式：只访问所选 SDK 的静态字节，Buffer 不复制数据，也不访问宿主文件系统。
+ulbind17::resources::embedded::SDKResources embedded("resources/");
+auto memory = embedded.OpenFile("resources/cacert.pem");
+
+// 文件模式：从 rootdir/resource_dir 读取，只需要链接 ulbind17::header。
+ulbind17::resources::filesystem::SDKResources files("./assets", "resources/");
+auto disk = files.OpenFile("resources/cacert.pem");
+```
+
+内嵌模式链接 `ulbind17::ulbind17`，文件模式可只链接 `ulbind17::header`。
+两种模式仅识别 ICU 和证书文件，匹配时规范化资源前缀与请求路径；未匹配的请求返回 false/nullptr，交由调用方的文件系统处理。
+Godot 插件应选择内嵌模式，普通项目内容继续使用 Godot `FileAccess`。
+
 回归测试覆盖绑定接口的类型转换、稀疏数组、Unicode 键、C++ 对象所有权与解除绑定、
 页面导航、两种字体、内嵌资源与所选 SDK 的字节一致性，以及 SDK 下载完整性和缓存错误。
 GLFW 示例继续显示 CPU 渲染的 BitmapSurface，没有实现新版 Ultralight GPUDriver 接口。

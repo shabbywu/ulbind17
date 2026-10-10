@@ -133,6 +133,13 @@ void navigation() {
 
 void resources(bool chinese) {
     check(!std::filesystem::exists("assets/resources"), "resource test requires no external runtime data");
+    ulbind17::resources::embedded::SDKResources embedded("virtual/../sdk-data");
+    check(!embedded.FileExists("resources/cacert.pem") && !embedded.OpenFile("sdk-data/unknown.dat").get(),
+          "embedded lookup must respect its prefix and reject unknown resource names");
+    auto embedded_icu = embedded.OpenFile("sdk-data/./icudt67l.dat");
+    check(embedded_icu.get() && embedded_icu->data() == ulbind17::resources::icudt67l_data &&
+              embedded_icu->size() == ulbind17::resources::icudt67l_size,
+          "embedded lookup must normalize paths and return the selected static SDK data");
     auto *fs = ultralight::Platform::instance().file_system();
     for (const auto *name : {"icudt67l.dat", "cacert.pem"}) {
         std::string path = std::string("resources/") + name;
