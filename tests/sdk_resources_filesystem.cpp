@@ -29,5 +29,8 @@ int main() {
         retained = temporary.OpenFile("cacert.pem");
     }
     if (!retained.get() || retained->size() == 0 || !retained->data()) return 4;
+    std::ifstream certificate(std::filesystem::path(ULBIND17_SDK_RESOURCES) / "cacert.pem", std::ios::binary);
+    const auto first_byte = certificate.get();
+    if (first_byte < 0 || static_cast<const unsigned char *>(retained->data())[0] != first_byte) return 4;
     std::cout << "Filesystem SDK resources PASS\n";
 }

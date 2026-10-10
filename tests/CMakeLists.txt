@@ -26,6 +26,19 @@ foreach(_case IN ITEMS cache checksum cached-checksum old-version platform downl
 endforeach()
 
 # The filesystem backend must link without the embedded SDK resource arrays.
+find_package(Threads REQUIRED)
+add_executable(ulbind17_javascript_tests javascript.cpp)
+target_link_libraries(ulbind17_javascript_tests PRIVATE ulbind17::ulbind17 Threads::Threads)
+if(MSVC)
+  target_compile_options(ulbind17_javascript_tests PRIVATE /utf-8)
+endif()
+ulbind17_copy_runtime_files(ulbind17_javascript_tests)
+foreach(_case IN ITEMS conveniences scaffold async expiry)
+  add_test(NAME javascript.${_case} COMMAND ulbind17_javascript_tests ${_case})
+  set_tests_properties(javascript.${_case} PROPERTIES TIMEOUT 20
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/isolated")
+endforeach()
+
 add_executable(ulbind17_filesystem_resources_tests sdk_resources_filesystem.cpp)
 target_link_libraries(ulbind17_filesystem_resources_tests PRIVATE ulbind17::header)
 target_compile_definitions(ulbind17_filesystem_resources_tests PRIVATE
