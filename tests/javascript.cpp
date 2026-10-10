@@ -85,7 +85,20 @@ void scaffold() {
         settled = true;
     });
     pump(fixture, [&] { return settled; });
+    ulbind17::jsc::String retained_function("(()=>42)");
+    auto handle = bridge->retain(bridge->evaluate(retained_function));
+    JSGarbageCollect(context);
+    auto function = JSValueToObject(context, handle->value(), nullptr);
+    check(JSValueToNumber(context, bridge->call(function), nullptr) == 42, "leased function was collected");
     bridge->invalidate();
+    try {
+        handle->value();
+        throw std::logic_error("expired handle remained callable");
+    } catch (const std::runtime_error &error) {
+        check(std::string(error.what()).find("expired") != std::string::npos, "expired handle error was lost");
+    }
+    std::thread releaser([handle = std::move(handle)]() mutable { handle.reset(); });
+    releaser.join();
     js::Context sdk(fixture.view.get());
     check(take(sdk.Evaluate<bool>("try{echo(1);false}catch(e){/expired/.test(e.message)}")), "saved callback entered expired bridge");
     auto reentrant = ulbind17::jsc::Bridge::create(context, fixture.view.get());
@@ -107,6 +120,11 @@ js::Task<int> await_page(js::Value function) {
     co_return result.value() + 1;
 }
 js::Task<int> fail() { co_return js::Error::Make(js::ErrorType::Error, "async failure"); }
+js::Task<> void_work() { co_await js::RunOnWorker([] {}); co_return; }
+js::Task<int> worker_failure() {
+    int value = co_await js::RunOnWorker([]() -> int { throw std::runtime_error("worker failure"); });
+    co_return value;
+}
 
 void async() {
     sample::Fixture fixture;
@@ -114,6 +132,8 @@ void async() {
     bindings.bindFunc("work", &work);
     bindings.bindFunc("awaitPage", &await_page);
     bindings.bindFunc("fail", &fail);
+    bindings.bindFunc("voidWork", &void_work);
+    bindings.bindFunc("workerFailure", &worker_failure);
     std::optional<js::Resolver> deferred;
     bindings.bindFunc("deferred", [&deferred](js::Resolver resolver) { deferred.emplace(std::move(resolver)); });
     check(bindings.AttachTo(fixture.view.get()), "async API attachment failed");
@@ -125,7 +145,11 @@ void async() {
             const later = await native.deferred();
             let rejection = '';
             try { await native.fail(); } catch(e) { rejection = e.message; }
-            return [worked,nested,later,rejection];
+            const voidResult = await native.voidWork();
+            let workerFailed = false, conversionFailed = false;
+            try { await native.workerFailure(); } catch(e) { workerFailed = e instanceof Error; }
+            try { await native.work('wrong'); } catch(e) { conversionFailed = e.code === 'ULJS_BAD_ARG'; }
+            return [worked,nested,later,rejection,voidResult === undefined,workerFailed,conversionFailed];
         })()
     )"));
     pump(fixture, [&] { return deferred.has_value(); });
@@ -137,6 +161,8 @@ void async() {
         check(take(ulbind17::get<int>(value, 0)) == 42 && take(ulbind17::get<int>(value, 1)) == 8 &&
               take(ulbind17::get<int>(value, 2)) == 9 && take(ulbind17::get<std::string>(value, 3)) == "async failure",
               "async/await result or rejection was lost");
+        check(take(ulbind17::get<bool>(value, 4)) && take(ulbind17::get<bool>(value, 5)) &&
+              take(ulbind17::get<bool>(value, 6)), "void task, worker exception or async argument error was lost: " + take(value.ToJSON()));
         settled = true;
     }), "Promise observer failed");
     pump(fixture, [&] { return settled; });

@@ -60,12 +60,16 @@ inline void set_exception(JSContextRef context, JSValueRef *exception, const cha
     auto value = JSValueMakeString(context, string);
     *exception = JSObjectMakeError(context, 1, &value, nullptr);
 }
+inline JSGlobalContextRef retain_context(JSContextRef context) {
+    if (!context) throw std::invalid_argument("Empty JavaScript context");
+    return JSGlobalContextRetain(JSContextGetGlobalContext(context));
+}
 
 class ContextScope {
     JSGlobalContextRef context_;
   public:
     explicit ContextScope(JSContextRef context)
-        : context_(JSGlobalContextRetain(JSContextGetGlobalContext(context))) {}
+        : context_(retain_context(context)) {}
     ~ContextScope() { JSGlobalContextRelease(context_); }
     ContextScope(const ContextScope &) = delete;
     ContextScope &operator=(const ContextScope &) = delete;
@@ -75,7 +79,7 @@ class Root {
     JSValueRef value_;
   public:
     Root(JSContextRef context, JSValueRef value)
-        : context_(JSGlobalContextRetain(JSContextGetGlobalContext(context))), value_(value) {
+        : context_(retain_context(context)), value_(value) {
         if (!value_) {
             JSGlobalContextRelease(context_);
             throw std::invalid_argument("Cannot protect an empty JavaScript value");
@@ -92,6 +96,21 @@ class Root {
 // for worker completion; never send raw JSC values to a worker thread.
 class Bridge : public std::enable_shared_from_this<Bridge> {
   public:
+    // A host may release a Handle on another thread (eg, a managed finalizer).
+    // Unprotect is posted to the renderer; navigation releases roots immediately.
+    class Handle {
+        std::weak_ptr<Bridge> bridge_;
+        ultralight::js::Context document_;
+        JSValueRef value_;
+        friend class Bridge;
+        Handle(std::weak_ptr<Bridge> bridge, ultralight::js::Context document, JSValueRef value)
+            : bridge_(std::move(bridge)), document_(std::move(document)), value_(value) {}
+      public:
+        ~Handle();
+        Handle(const Handle &) = delete;
+        Handle &operator=(const Handle &) = delete;
+        JSValueRef value() const;
+    };
     using Callback = std::function<JSValueRef(JSContextRef, JSObjectRef, std::span<const JSValueRef>)>;
     using Getter = std::function<JSValueRef(JSContextRef, JSStringRef)>;
     using Setter = std::function<bool(JSContextRef, JSStringRef, JSValueRef)>;
@@ -123,10 +142,23 @@ class Bridge : public std::enable_shared_from_this<Bridge> {
     ultralight::js::Context document_;
     std::vector<std::weak_ptr<Handlers>> handlers_;
     std::vector<std::weak_ptr<Observer>> observers_;
-    std::map<JSValueRef, std::unique_ptr<Root>> roots_;
+    struct Protected { std::unique_ptr<Root> root; size_t handles = 0; bool permanent = false; };
+    std::map<JSValueRef, Protected> roots_;
+
+    Protected &root(JSValueRef value) {
+        auto context = this->context();
+        auto found = roots_.find(value);
+        if (found == roots_.end()) found = roots_.emplace(value, Protected{std::make_unique<Root>(context, value)}).first;
+        return found->second;
+    }
+    void release(JSValueRef value) {
+        auto found = roots_.find(value);
+        if (found != roots_.end() && found->second.handles && --found->second.handles == 0 && !found->second.permanent)
+            roots_.erase(found);
+    }
 
     explicit Bridge(JSContextRef context, ultralight::View *view)
-        : context_(JSGlobalContextRetain(JSContextGetGlobalContext(context))), document_(view) {}
+        : context_(retain_context(context)), document_(view) {}
     static JSClassRef callback_class() {
         static auto type = [] {
             auto definition = kJSClassDefinitionEmpty;
@@ -225,7 +257,12 @@ class Bridge : public std::enable_shared_from_this<Bridge> {
         JSGlobalContextRelease(context);
     }
     void protect(JSValueRef value) {
-        if (!roots_.contains(value)) roots_.emplace(value, std::make_unique<Root>(context(), value));
+        root(value).permanent = true;
+    }
+    std::unique_ptr<Handle> retain(JSValueRef value) {
+        auto handle = std::unique_ptr<Handle>(new Handle(weak_from_this(), document_, value));
+        ++root(value).handles;
+        return handle;
     }
     JSObjectRef makeFunction(Callback callback) {
         auto context = this->context();
@@ -307,5 +344,16 @@ class Bridge : public std::enable_shared_from_this<Bridge> {
         call(JSValueToObject(context, method, nullptr), args, object);
     }
 };
+
+inline Bridge::Handle::~Handle() {
+    document_.PostTask([weak = bridge_, value = value_] {
+        if (auto bridge = weak.lock(); bridge && bridge->active()) bridge->release(value);
+    });
+}
+inline JSValueRef Bridge::Handle::value() const {
+    auto bridge = bridge_.lock();
+    if (!bridge || !bridge->active()) throw std::runtime_error("JavaScript handle belongs to an expired document");
+    return value_;
+}
 
 } // namespace ulbind17::jsc
