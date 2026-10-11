@@ -24,19 +24,19 @@ jobs:
             os: windows-2022
             triplet: x64-windows
             env: {}
-            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release']"
+            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release']"
           - name: Linux x64 / GCC
             os: ubuntu-24.04
             triplet: x64-linux
             env:
               CC: gcc-13
               CXX: g++-13
-            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release']"
+            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release']"
           - name: macOS arm64 / Clang
             os: macos-15
             triplet: arm64-osx
             env: {}
-            args: "['-DENABLE_TEST=ON', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64', '-DULBIND17_ALLOW_UNAVAILABLE_GRAPHICS=ON']"
+            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64', '-DULBIND17_ALLOW_UNAVAILABLE_GRAPHICS=ON']"
 
     steps:
       - uses: actions/checkout@v4

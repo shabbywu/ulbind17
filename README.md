@@ -32,7 +32,7 @@ ctest --test-dir build/local --output-on-failure
 | --- | --- | --- |
 | `ULTRALIGHT_SDK_ROOT` | 空 | 已解压的 SDK 路径；优先于包查找和自动下载 |
 | `ULTRALIGHT_SDK_VERSION` | `latest` | 自动下载的 SDK 版本 |
-| `BUILD_TESTING` | 作为顶层项目时为 ON | 构建四个控制台示例和回归测试 |
+| `BUILD_TESTING` | 作为顶层项目时为 ON | 构建控制台示例和回归测试 |
 | `ENABLE_TEST` | OFF | 构建全部五个示例 |
 | `ULBIND17_BUILD_RENDERING_SAMPLE` | `ENABLE_TEST` 的值 | 单独控制 GLFW/GLAD 渲染示例的构建 |
 | `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS` | OFF | 图形环境不可用时，允许 CTest 将渲染冒烟测试标记为跳过 |
@@ -71,6 +71,144 @@ ulbind17_copy_runtime_files(my_app)
 `ulbind17_copy_runtime_files()` 将动态库复制到可执行文件旁，并设置 rpath；
 使用内嵌资源时，不需要再复制外部 ICU 数据或证书包。
 自行提供文件系统和资源的应用也可以使用 SDK 的 `ultralight_copy_runtime_files()` 辅助函数。
+
+Python 扩展、Godot 插件等共享库或模块库也可以调用相同的复制函数：
+
+```cmake
+target_link_libraries(my_extension PRIVATE ulbind17::ulbind17)
+ulbind17_copy_runtime_files(my_extension INCLUDE_APPCORE OFF)
+```
+
+`INCLUDE_APPCORE` 默认 ON，保留原调用行为；不使用 AppCore 的宿主可关闭它。
+macOS 的库从 `@loader_path/` 查找同目录依赖，Linux 使用 `$ORIGIN`。
+复制到可执行文件、SHARED_LIBRARY 或 MODULE_LIBRARY 目标的输出目录；该函数不负责安装或 wheel 打包。
+
+## 通用宿主运行时
+
+`<ulbind17/runtime.hpp>` 提供可选的 `Runtime`、`ManagedView` 和 CPU 像素接口。
+实现仍为头文件，不依赖 Python、Godot、窗口库或图片编码器。
+
+```cpp
+#include <ulbind17/setup.hpp>
+#include <ulbind17/runtime.hpp>
+
+ulbind17::setup_ultralight_platform();
+auto runtime = ulbind17::Runtime::Create();
+ultralight::ViewConfig config;
+config.is_accelerated = false;
+auto view = runtime.CreateView(800, 450, config);
+
+ulbind17::ViewCallbacks callbacks;
+callbacks.window_ready = [&](const ulbind17::FrameEvent &event) {
+    if (!event.is_main_frame) return;
+    view.WithBridge([](ulbind17::jsc::Bridge &bridge) {
+        bridge.bindFunc("echo", [](JSContextRef context, JSObjectRef,
+                                  std::span<const JSValueRef> args) {
+            return args.empty() ? JSValueMakeUndefined(context) : args[0];
+        });
+    });
+};
+callbacks.dom_ready = [](const ulbind17::FrameEvent &event) {
+    // 在主文档就绪后执行依赖 DOM 的操作。
+};
+view.SetCallbacks(std::move(callbacks));
+view.LoadHTML("<script>console.log(echo('hello'))</script>");
+
+// 由宿主循环重复调用；Runtime 不运行后台循环。
+runtime.Update();
+runtime.RefreshDisplay(0);
+runtime.Render();
+
+auto pixels = view.CopyPixels();
+view.ClearDirtyBounds(); // 成功消费当前帧后，再确认脏区域。
+runtime.Close();
+```
+
+完整、带超时的宿主适配示例见 [samples/host_adapter.cpp](samples/host_adapter.cpp)，
+构建后运行 `HostAdapter`，或执行 `ctest -R HostAdapter`。
+
+宿主已有 Renderer 时，在它的创建线程调用 `Runtime::FromExisting(renderer)`。
+它持有引用，不重设平台服务。文件系统、字体、日志、SurfaceFactory 和 GPUDriver
+仍由宿主通过 SDK Platform 配置，并保持存活至 Renderer 的最后一个引用释放。
+独立宿主使用 `Create()`，此前必须注册 FileSystem 和 FontLoader。一个程序只创建一个 Renderer：
+同一二进制内重复 `Create()` 返回共享运行时；关闭后不会重新创建 Renderer。
+不同扩展模块的头文件状态不构成进程级初始化协调，已有宿主应显式传入同一个 Renderer。
+
+### 生命周期、回调与线程
+
+- Runtime 和 ManagedView 是共享状态的可复制句柄。最后一个 Runtime 句柄释放时，仍存活的
+  ManagedView 会继续持有运行时；显式 `Runtime::Close()` 关闭所有受管理页面。
+- `ManagedView::Close()` 和 `Runtime::Close()` 可重复调用。页面先停止回调，再解除文档 Bridge、
+  取消 Promise 观察、清理宿主回调并释放引用。宿主另行持有的 SDK Renderer 引用不会被强制销毁。
+- 主框架开始导航或报告新窗口对象时，使旧 Bridge 失效。子框架事件携带 frame ID 和
+  `is_main_frame`，不会替换主框架 Bridge。页面句柄不可跨导航使用。
+- `SetCallbacks()` 替换整组回调。回调中允许关闭页面、发起导航或替换回调；渲染器的 Update、
+  RefreshDisplay 和 Render 不允许嵌套。加载结束不代表成功，应单独处理 `fail_loading`。
+- ManagedView 独占 SDK 的 LoadListener 和 ViewListener 槽位。`native()` 返回借用指针，
+  用于输入、Session、GPU render target 等 SDK 扩展操作；不要替换受管理的两类监听器。
+  其他宿主监听器仍由宿主管理。
+- `WithBridge()` 在 JS 上下文锁有效期间调用回调。返回宿主值或 `Bridge::Handle`，不要返回借用的
+  JSC 指针或 Bridge 引用。原生绑定不自动跨导航重放；在每次主框架 `window_ready` 中重新注册。
+- View/Runtime 操作、Close 和最终析构在 Renderer 创建线程执行。跨线程使用 `PostTask()`；
+  它只在后续 Update 中执行，Runtime 关闭后抑制尚未执行的任务。任务捕获对象须能安全析构。
+  同一 Bridge::Handle 的析构可在工作线程执行，但读取它仍须回到 Renderer 线程。
+- 回调不要按值捕获自己所在的 ManagedView/Runtime，以免形成引用环；使用宿主持有的对象、弱引用，
+  或保证在宿主销毁前显式 Close。线程终结器须在最后一次 Update 停止前安排 Close。
+
+`SetErrorHandler()` 接收页面事件和已投递任务的宿主异常；未设置时发送到 SDK Logger。
+错误处理器自身抛出的异常也会被隔离。`ulbind17::Error` 继承 `std::runtime_error`，
+提供 `ErrorCode`、消息以及可取得的 JS stack/source_url/line/column，诊断字符串独立于文档寿命。
+原有类型化接口继续返回 `js::Result`，原有 JSC 验证接口保留异常类别。
+
+### CPU 像素
+
+`WithPixels(callback)` 提供只在回调期间有效的 `PixelView`；`CopyPixels()` 返回独立拥有内存的
+`PixelBuffer`，后者可跨线程使用或在 View 关闭后保留。
+两者提供 width、height、row_bytes、dirty_bounds、format 和 data。
+原生格式是 **BGRA8、预乘 alpha**；row_bytes 可能包含填充，不保证等于 width × 4。
+透明像素须按该格式消费，外部项目自行实现 RGBA/非预乘转换和图片编码。
+
+使用任何自定义 Surface 都不需要强制转换成 BitmapSurface。读取不清除脏区域，
+上传成功后调用 `ClearDirtyBounds()`。像素锁期间拒绝驱动 Renderer、导航、Resize、再次读取和 Close；
+回调抛异常也会解锁。不要从渲染器回调中读取像素，或通过 `native()` 绕过锁限制。
+GPU View 没有 CPU Surface，读取时报 `ErrorCode::Unsupported`，宿主直接使用其 render target。
+
+## 动态 JavaScriptCore 桥接
+
+`<ulbind17/jsc/Bridge.hpp>` 面向运行时类型的宿主适配器；Godot Variant、Python 对象和引用计数
+由各自的外部项目转换。JSC 的原始句柄与类型化 SDK 的 `js::Value::raw()` 是不同类型，不能混用。
+手工创建 Bridge 时须在 View 的 JS 上下文锁内调用 `Bridge::create(lock->ctx(), view)`，
+并在导航和销毁时主动 `invalidate()`；ManagedView 自动处理这一步。
+
+| 能力 | 接口 |
+| --- | --- |
+| 属性与索引 | `get`、`set`、`has`、`at`、`setAt` |
+| 数组与对象 | `length`、`keys`、`makeArray`、`makePlainObject` |
+| 基础值 | `makeBoolean`、`makeNumber`、`makeString`、`makeNull`、`makeUndefined` |
+| 严格读取 | `readBoolean`、`readNumber`、`readString` |
+| 带所有权操作 | `evaluateRetained`、`getRetained`、`callRetained`、`retain` |
+| 动态宿主对象 | `makeObject(payload, ObjectHooks)`、`unwrap<T>` |
+| Promise | `then(promise, settled, cancelled)` |
+
+`keys()` 只返回自身可枚举的字符串键，不读取属性值；`has()` 也检查继承属性。
+数组空洞读取为 undefined，length 包含空洞。严格读取不会将 `"7"` 转为数字。
+`callRetained()` 检查函数、参数及 receiver 的 Bridge 归属，并保留 receiver 的 `this`。
+句柄属于某个 Bridge，不能直接在另一 Bridge 中使用，即使两个 Bridge 对应同一个页面。
+
+原始值是借用值，须属于当前文档；在后续分配或执行脚本前，使用 `Root`/`retain()` 保持它们存活。
+JSC 原始指针不携带来源元数据，原始接口无法替宿主检查跨上下文误用；面向外部语言应使用保留句柄。
+Unicode 字符串和键支持内嵌 NUL，传递 `std::string_view` 时须保留实际长度。
+
+`ObjectHooks` 提供 get/set/has/keys。get 返回 nullptr 表示交由普通属性查找处理，set 返回 false
+表示未处理该写入。只提供 keys 时，has 从 keys 判断属性存在性，不读取 getter。
+旧的 getter/setter 重载仍保留原来的查找语义。
+JSC 对 has/keys 钩子没有异常输出槽，这两类钩子应不抛异常；意外异常会记录到 Logger，
+并返回 false/空键集合。get、set 和函数回调的异常会转成页面的 JS Error。
+
+递归数据转换可使用 `<ulbind17/jsc/Traversal.hpp>` 的 `Traversal::enter(identity)`，
+其作用域 Guard 默认限制 64 层并检测当前路径的循环引用；重复的兄弟节点允许再次转换。
+容器映射、整数精度、null/undefined 映射和宿主对象有效性仍由适配器决定。
+低层 JSC 手工绑定由宿主决定哪些页面能访问，不自动应用 `js::API::AttachTo()` 的来源规则。
 
 ## 绑定 C++ 函数和类
 
@@ -190,6 +328,24 @@ auto disk = files.OpenFile("resources/cacert.pem");
 内嵌模式链接 `ulbind17::ulbind17`，文件模式可只链接 `ulbind17::header`。
 两种模式仅识别 ICU 和证书文件，匹配时规范化资源前缀与请求路径；未匹配的请求返回 false/nullptr，交由调用方的文件系统处理。
 Godot 插件应选择内嵌模式，普通项目内容继续使用 Godot `FileAccess`。
+
+使用 `FileSystemOverlay` 可以复用资源优先、宿主文件系统兜底的组合逻辑：
+
+```cpp
+#include <ulbind17/resources/FileSystemOverlay.hpp>
+#include <ulbind17/resources/embedded/SDKResources.hpp>
+
+auto files = std::make_shared<MyHostFileSystem>();
+auto overlay = std::make_shared<ulbind17::resources::FileSystemOverlay<
+    ulbind17::resources::embedded::SDKResources>>(
+        ulbind17::resources::embedded::SDKResources(config.resource_path_prefix.utf8().data()), files);
+ultralight::Platform::instance().set_file_system(overlay.get());
+// 在创建 Renderer 前注册，并保持 overlay 存活至最后一个 Renderer 引用释放。
+```
+
+模板也接受文件式 SDKResources。成功读取 SDK 资源时不访问宿主文件系统；未命中或资源无法读取时
+委托宿主。Mime-type 和 charset 始终由宿主提供。Overlay 拥有 provider 和宿主的共享引用，
+两者须支持 SDK 的并发文件读取调用。
 
 回归测试覆盖绑定接口的类型转换、稀疏数组、Unicode 键、C++ 对象所有权与解除绑定、
 页面导航、两种字体、内嵌资源与所选 SDK 的字节一致性，以及 SDK 下载完整性和缓存错误。
