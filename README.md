@@ -353,3 +353,19 @@ GLFW 示例继续显示 CPU 渲染的 BitmapSurface，没有实现新版 Ultrali
 
 字体度量、内存默认值、WebAssembly 等引擎行为变化，参见
 [Ultralight 官方迁移指南](https://ultralig.ht/docs/2.0/migrating-from-1-4-to-2-0)。
+
+## ManagedView 输入转发
+
+`ManagedView` 支持 `FireMouseEvent`、`FireScrollEvent`、`FireKeyEvent`、`Focus`、
+`Unfocus`、`HasFocus` 和 `HasInputFocus`，直接使用 SDK 的通用事件类型。
+坐标和滚动量遵循 SDK 的逻辑像素约定，文本输入使用 `KeyEvent::kType_Char`，
+物理按键推荐 `kType_RawKeyDown` / `kType_KeyUp`。
+
+调用必须位于 Renderer 线程，关闭后返回 `Closed`；像素锁定、Renderer 调用、
+输入分发或 `WithBridge` 操作期间再次发送输入返回 `Busy`。
+输入期间保活原生 View 和 Renderer，因此回调可以关闭宿主包装对象。
+回调可通过 `WithBridge` 读取页面，但应在当前调用返回后再发送后续输入。
+`HasFocus` / `HasInputFocus` 仅查询状态，不触发输入。
+
+事件分发不自动驱动渲染。宿主应继续执行 `Update`、`RefreshDisplay`、`Render`；
+某些滚动效果需要完整的帧循环才能推进。
