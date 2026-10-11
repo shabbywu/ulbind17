@@ -61,6 +61,7 @@ struct RuntimeState {
     std::atomic<bool> closed = false;
     bool busy = false;
     std::size_t pixel_locks = 0;
+    std::size_t bridge_scopes = 0;
     std::vector<std::weak_ptr<ViewState>> views;
     std::function<void(const Error &)> error_handler;
 
@@ -285,9 +286,44 @@ class ManagedView {
     std::shared_ptr<runtime_detail::ViewState> state_;
     explicit ManagedView(std::shared_ptr<runtime_detail::ViewState> state) : state_(std::move(state)) {}
     friend class Runtime;
+    template <typename F> void input(F &&callback) const {
+        auto state = state_;
+        state->require_open(); state->require_unlocked();
+        auto runtime = state->runtime;
+        runtime->require_unlocked();
+        if (runtime->busy || runtime->bridge_scopes)
+            throw Error(ErrorCode::Busy, "Input cannot be dispatched during Renderer, input, or Bridge calls");
+        // A callback may close either wrapper. Keep both SDK objects alive until
+        // dispatch returns, without retaining any language-specific references.
+        auto renderer = runtime->renderer;
+        auto view = state->view;
+        runtime->busy = true;
+        struct Guard { bool &busy; ~Guard() { busy = false; } } guard{runtime->busy};
+        std::invoke(std::forward<F>(callback), *view.get());
+    }
+
   public:
     // Borrowed escape hatch. Do not replace this wrapper's load/view listeners.
     ultralight::View *native() const { state_->require_open(); return state_->view.get(); }
+    void FireMouseEvent(const ultralight::MouseEvent &event) const {
+        input([&](auto &view) { view.FireMouseEvent(event); });
+    }
+    void FireScrollEvent(const ultralight::ScrollEvent &event) const {
+        input([&](auto &view) { view.FireScrollEvent(event); });
+    }
+    void FireKeyEvent(const ultralight::KeyEvent &event) const {
+        input([&](auto &view) { view.FireKeyEvent(event); });
+    }
+    void Focus() const { input([](auto &view) { view.Focus(); }); }
+    void Unfocus() const { input([](auto &view) { view.Unfocus(); }); }
+    bool HasFocus() const {
+        auto state = state_; state->require_open();
+        auto view = state->view; return view->HasFocus();
+    }
+    bool HasInputFocus() const {
+        auto state = state_; state->require_open();
+        auto view = state->view; return view->HasInputFocus();
+    }
     void SetCallbacks(ViewCallbacks callbacks) const {
         state_->require_open(); state_->callbacks = std::move(callbacks);
     }
@@ -315,6 +351,9 @@ class ManagedView {
     template <typename F> decltype(auto) WithBridge(F &&callback) const {
         auto state = state_; state->require_open(); state->require_unlocked();
         auto view = state->view;
+        auto runtime = state->runtime;
+        ++runtime->bridge_scopes;
+        struct Scope { std::size_t &count; ~Scope() { --count; } } scope{runtime->bridge_scopes};
         auto lock = view->LockJSContext();
         state->require_open();
         if (!lock.get() || !lock->ctx()) throw Error(ErrorCode::PageGone, "View has no JavaScript context");

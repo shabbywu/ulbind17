@@ -86,7 +86,7 @@ set_tests_properties(resources.filesystem PROPERTIES TIMEOUT 20
 add_executable(ulbind17_runtime_tests runtime.cpp)
 target_link_libraries(ulbind17_runtime_tests PRIVATE ulbind17::ulbind17 Threads::Threads)
 ulbind17_copy_runtime_files(ulbind17_runtime_tests INCLUDE_APPCORE OFF)
-foreach(_case IN ITEMS dynamic lifecycle threading)
+foreach(_case IN ITEMS dynamic lifecycle threading input input-close input-runtime-close)
   add_test(NAME runtime.${_case} COMMAND ulbind17_runtime_tests ${_case})
   set_tests_properties(runtime.${_case} PROPERTIES TIMEOUT 20
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/isolated")

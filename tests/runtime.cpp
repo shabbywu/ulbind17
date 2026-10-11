@@ -16,7 +16,7 @@ template <typename F> void expect(ErrorCode code, F callback) {
 template <typename F> void pump(const ulbind17::Runtime &runtime, F ready) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (!ready() && std::chrono::steady_clock::now() < deadline) {
-        runtime.Update(); std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        runtime.Update(); runtime.RefreshDisplay(); runtime.Render(); std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     check(ready(), "Timed out waiting for page event");
 }
@@ -241,6 +241,72 @@ void threading(const ulbind17::Runtime &runtime) {
     expect(ErrorCode::Closed, [&] { ulbind17::Runtime::Create(); });
 }
 
+
+void input_events(const ulbind17::Runtime &runtime, bool close_view = false, bool close_runtime = false) {
+    auto view = page(runtime); view.Resize(320, 240);
+    bool ready = false;
+    ulbind17::ViewCallbacks callbacks;
+    callbacks.dom_ready = [&](const auto &event) { if (event.is_main_frame) ready = true; };
+    view.SetCallbacks(callbacks);
+    view.LoadHTML("<style>body{margin:0}button,input{display:block;width:150px;height:40px}</style>"
+                  "<button id=b onclick='hit()'>click</button><input id=i>"
+                  "<div style='height:2000px;width:2000px'>scroll</div>"
+                  "<script>globalThis.clicks=0;function hit(){clicks++}</script>");
+    pump(runtime, [&] { return ready; }); view.SetCallbacks({});
+    runtime.Render();
+    auto number = [&](const char *script) {
+        return view.WithBridge([&](auto &bridge) {
+            return bridge.readNumber(bridge.evaluateRetained(script)->value());
+        });
+    };
+    auto click = [&] {
+        view.FireMouseEvent({ultralight::MouseEvent::kType_MouseMoved, 20, 20, ultralight::MouseEvent::kButton_None});
+        view.FireMouseEvent({ultralight::MouseEvent::kType_MouseDown, 20, 20, ultralight::MouseEvent::kButton_Left});
+        view.FireMouseEvent({ultralight::MouseEvent::kType_MouseUp, 20, 20, ultralight::MouseEvent::kButton_Left});
+    };
+    std::exception_ptr worker_error;
+    std::thread worker([&] {
+        try { expect(ErrorCode::WrongThread, [&] { view.Focus(); }); }
+        catch (...) { worker_error = std::current_exception(); }
+    });
+    worker.join(); if (worker_error) std::rethrow_exception(worker_error);
+    view.Unfocus(); check(!view.HasFocus(), "Unfocus failed");
+    view.Focus(); check(view.HasFocus(), "Focus failed");
+    expect(ErrorCode::Busy, [&] { view.WithPixels([&](const auto &) { view.Focus(); }); });
+    view.WithBridge([&](auto &) { expect(ErrorCode::Busy, [&] { view.Focus(); }); });
+    click(); check(number("clicks") == 1, "Mouse click did not reach DOM");
+    view.FireMouseEvent({ultralight::MouseEvent::kType_MouseDown, 20, 65, ultralight::MouseEvent::kButton_Left});
+    view.FireMouseEvent({ultralight::MouseEvent::kType_MouseUp, 20, 65, ultralight::MouseEvent::kButton_Left});
+    check(view.HasInputFocus(), "Input did not receive focus");
+    ultralight::KeyEvent key;
+    key.type = ultralight::KeyEvent::kType_Char; key.modifiers = 0;
+    key.virtual_key_code = 0; key.native_key_code = 0;
+    key.text = "x"; key.unmodified_text = "x";
+    key.is_keypad = key.is_auto_repeat = key.is_system_key = false;
+    view.FireKeyEvent(key);
+    check(number("i.value==='x'?1:0") == 1, "Char input failed");
+    view.FireMouseEvent({ultralight::MouseEvent::kType_MouseMoved, 200, 150, ultralight::MouseEvent::kButton_None});
+    view.FireScrollEvent({ultralight::ScrollEvent::kType_ScrollByPixel, 0, -100, 200, 150});
+    pump(runtime, [&] { return number("scrollY") > 0; });
+    view.WithBridge([](auto &bridge) { bridge.evaluateRetained("scrollTo(0,0)"); });
+    pump(runtime, [&] { return number("scrollY") == 0; });
+    runtime.Update(); runtime.RefreshDisplay(); runtime.Render();
+    bool called = false;
+    view.WithBridge([&](auto &bridge) {
+        bridge.bindFunc("hit", [&](JSContextRef ctx, JSObjectRef, std::span<const JSValueRef>) {
+            called = true;
+            expect(ErrorCode::Busy, [&] { view.Focus(); });
+            expect(ErrorCode::Busy, [&] { runtime.Update(); });
+            if (close_view) view.Close();
+            if (close_runtime) runtime.Close();
+            return JSValueMakeUndefined(ctx);
+        });
+    });
+    click(); check(called, "Bound input callback was not called");
+    if (close_view || close_runtime) expect(ErrorCode::Closed, [&] { view.HasFocus(); });
+    else { view.Focus(); runtime.Update(); view.Close(); expect(ErrorCode::Closed, [&] { view.Focus(); }); }
+}
+
 int main(int argc, char **argv) {
     return sample::run([&] {
         auto runtime = ulbind17::Runtime::Create();
@@ -248,6 +314,9 @@ int main(int argc, char **argv) {
         if (mode == "dynamic") dynamic(runtime);
         else if (mode == "lifecycle") lifecycle(runtime);
         else if (mode == "threading") threading(runtime);
+        else if (mode == "input") input_events(runtime);
+        else if (mode == "input-close") input_events(runtime, true);
+        else if (mode == "input-runtime-close") input_events(runtime, false, true);
         else throw std::invalid_argument("Unknown runtime test");
         runtime.Close();
     });
