@@ -80,12 +80,17 @@ if(ULBIND17_BUILD_APPCORE_SAMPLE)
             "${_appcore_assets}"
     VERBATIM)
   if(BUILD_TESTING)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      set(_appcore_smoke_timeout 120)
+    else()
+      set(_appcore_smoke_timeout 30)
+    endif()
     add_test(NAME AppCoreExample.smoke COMMAND $<TARGET_FILE:AppCoreExample>
                                                --smoke-test)
     set_tests_properties(
       AppCoreExample.smoke
-      PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE WORKING_DIRECTORY
-                 "${CMAKE_CURRENT_BINARY_DIR}/isolated")
+      PROPERTIES TIMEOUT ${_appcore_smoke_timeout} RUN_SERIAL TRUE
+                 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/isolated")
   endif()
 endif()
 

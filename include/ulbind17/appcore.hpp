@@ -319,10 +319,10 @@ class Application {
         state_->RequireOpen();
         return runtime_;
     }
-    Window CreateWindow(double width, double height, bool fullscreen = false,
-                        ultralight::WindowFlags flags = ultralight::WindowFlags::Titled |
-                                                        ultralight::WindowFlags::Resizable,
-                        ultralight::Monitor *monitor = nullptr) const {
+    Window NewWindow(double width, double height, bool fullscreen = false,
+                     ultralight::WindowFlags flags = ultralight::WindowFlags::Titled |
+                                                     ultralight::WindowFlags::Resizable,
+                     ultralight::Monitor *monitor = nullptr) const {
         state_->RequireOpen();
         auto runtime = appcore_detail::Access::State(runtime_);
         runtime->require_unlocked();
@@ -340,6 +340,17 @@ class Application {
         state_->windows.push_back(state);
         return Window(std::move(state));
     }
+    // Keep the old member spelling without changing the caller's Win32 macro state.
+    // Portable callers should use NewWindow().
+#pragma push_macro("CreateWindow")
+#undef CreateWindow
+    Window(CreateWindow)(double width, double height, bool fullscreen = false,
+                         ultralight::WindowFlags flags = ultralight::WindowFlags::Titled |
+                                                         ultralight::WindowFlags::Resizable,
+                         ultralight::Monitor *monitor = nullptr) const {
+        return NewWindow(width, height, fullscreen, flags, monitor);
+    }
+#pragma pop_macro("CreateWindow")
     bool RunOnce(double max_wait_seconds = 0.0) const {
         auto state = state_;
         state->RequireThread();

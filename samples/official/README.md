@@ -34,6 +34,7 @@ ctest --test-dir build/appcore -R 'Official|GameUIHostAdapter' --output-on-failu
 
 样例各自复制动态库、页面与 SDK 数据资源，避免不同样例的 `assets/app.html` 冲突。
 构建时会重新复制资源，修改 HTML 后再次构建即可。桌面测试需要原生桌面会话。
+Linux 桌面冒烟测试允许 90 秒完成首帧软件渲染，CTest 的外层超时为 120 秒。
 真实跨屏 DPI、窗口拖动和中文 IME 可在已有 `AppCoreExample` 中交互验证。
 
 ## Game UI 离屏示例

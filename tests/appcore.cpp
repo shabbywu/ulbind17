@@ -131,7 +131,7 @@ void hosted(std::string_view mode) {
         {
             auto temporary = ac::Application::Create(settings);
             native = temporary.native();
-            survivor.emplace(temporary.CreateWindow(100, 100, false, ultralight::WindowFlags::Hidden));
+            survivor.emplace(temporary.NewWindow(100, 100, false, ultralight::WindowFlags::Hidden));
         }
         auto recovered = ac::Application::Create();
         check(recovered.native() == native, "Empty Window did not keep Application alive");
@@ -155,10 +155,10 @@ void hosted(std::string_view mode) {
     expect(ErrorCode::Unsupported, [&] { shared_runtime.Render(); });
     expect(ErrorCode::Unsupported, [&] { Runtime::Create().RefreshDisplay(); });
     expect(ErrorCode::InvalidArgument, [&] { app.RunOnce(-1); });
-    expect(ErrorCode::InvalidArgument, [&] { app.CreateWindow(0, 100); });
-    auto window = app.CreateWindow(320, 200, false,
-                                   ultralight::WindowFlags::Titled | ultralight::WindowFlags::Resizable |
-                                       ultralight::WindowFlags::Hidden);
+    expect(ErrorCode::InvalidArgument, [&] { app.NewWindow(0, 100); });
+    auto window = app.NewWindow(320, 200, false,
+                                ultralight::WindowFlags::Titled | ultralight::WindowFlags::Resizable |
+                                    ultralight::WindowFlags::Hidden);
     auto config = window.native()->default_view_config();
     auto view = runtime.CreateView(window.native()->device_width(), window.native()->device_height(), config);
     auto *load = view.native()->load_listener();
@@ -221,7 +221,7 @@ void hosted(std::string_view mode) {
     if (mode == "destruction") {
         std::optional<ManagedView> survivor;
         {
-            auto transient = app.CreateWindow(100, 100, false, ultralight::WindowFlags::Hidden);
+            auto transient = app.NewWindow(100, 100, false, ultralight::WindowFlags::Hidden);
             survivor.emplace(runtime.CreateView(100, 100, transient.native()->default_view_config()));
             transient.AdoptPanel(*survivor);
             { auto copy = transient; }

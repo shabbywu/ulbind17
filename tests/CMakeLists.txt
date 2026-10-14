@@ -118,7 +118,7 @@ foreach(_case IN ITEMS dynamic lifecycle threading input input-close
 endforeach()
 
 if(ULBIND17_ENABLE_APPCORE)
-  add_executable(ulbind17_appcore_tests appcore.cpp)
+  add_executable(ulbind17_appcore_tests appcore.cpp appcore_window_macro.cpp)
   target_link_libraries(ulbind17_appcore_tests PRIVATE ulbind17::appcore
                                                        Threads::Threads)
   get_filename_component(_appcore_sdk_root "${ULTRALIGHT_RESOURCES_DIR}"

@@ -1,3 +1,11 @@
+# Allow cold-start software GPU compilation on Linux without skipping desktop
+# checks.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(_official_smoke_timeout 120)
+else()
+  set(_official_smoke_timeout 45)
+endif()
+
 function(ulbind17_add_official_sample target directory)
   add_executable(${target} MACOSX_BUNDLE "${directory}/main.cpp")
   target_link_libraries(${target} PRIVATE ulbind17::appcore)
@@ -28,8 +36,9 @@ function(ulbind17_add_official_sample target directory)
   if(BUILD_TESTING)
     add_test(NAME ${target}.smoke COMMAND $<TARGET_FILE:${target}> --smoke-test)
     set_tests_properties(
-      ${target}.smoke PROPERTIES TIMEOUT 45 RUN_SERIAL TRUE WORKING_DIRECTORY
-                                 "${CMAKE_CURRENT_BINARY_DIR}")
+      ${target}.smoke
+      PROPERTIES TIMEOUT ${_official_smoke_timeout} RUN_SERIAL TRUE
+                 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   endif()
 endfunction()
 
@@ -49,8 +58,8 @@ if(ULBIND17_BUILD_OFFICIAL_SAMPLES)
                        ${_scene})
       set_tests_properties(
         Official13GameUI.${_scene}
-        PROPERTIES TIMEOUT 45 RUN_SERIAL TRUE WORKING_DIRECTORY
-                   "${CMAKE_CURRENT_BINARY_DIR}")
+        PROPERTIES TIMEOUT ${_official_smoke_timeout} RUN_SERIAL TRUE
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
     endforeach()
   endif()
 endif()

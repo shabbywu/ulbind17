@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
             failed = true;
             std::cerr << error.what() << '\n';
         });
-        auto window = app.CreateWindow(800, 540);
+        auto window = app.NewWindow(800, 540);
         window.native()->SetTitle("ulbind17 AppCore — system fonts, input and DPI");
         window.SetCallbacks({[&] { app.Close(); },
                              [&](double width, double height) {
@@ -82,7 +82,13 @@ addEventListener('resize', metrics); metrics();
 </script>
 )HTML");
         view.Focus();
-        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        // Software OpenGL under Xvfb can spend tens of seconds compiling the first frame.
+#if defined(__linux__)
+        constexpr int smoke_seconds = 90;
+#else
+        constexpr int smoke_seconds = 10;
+#endif
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(smoke_seconds);
         int ready_iterations = 0;
         bool validated = false;
         while (app.RunOnce(0.002)) {
@@ -90,7 +96,10 @@ addEventListener('resize', metrics); metrics();
                 throw std::runtime_error("AppCore page failed");
             if (smoke) {
                 if (std::chrono::steady_clock::now() > deadline)
-                    throw std::runtime_error("AppCore smoke timed out");
+                    throw std::runtime_error("AppCore smoke timed out: DOM=" + std::to_string(ready) +
+                                             " panel_height=" + std::to_string(panel->bounds().height()) +
+                                             " visible=" + std::to_string(window.native()->is_visible()) +
+                                             " ready_iterations=" + std::to_string(ready_iterations));
                 if (ready && panel->bounds().height() > 0 && ++ready_iterations >= 20) {
                     view.WithBridge([&](auto &bridge) {
                         if (bridge.readNumber(bridge.evaluateRetained("bridgeAnswer")->value()) != 42)

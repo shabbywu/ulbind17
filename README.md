@@ -458,7 +458,7 @@ macOS 上以 `.app/Contents/Resources/` 为基准。自定义 handler 的所有�
 namespace ac = ulbind17::appcore;
 auto app = ac::Application::Create();
 auto runtime = app.runtime(); // 内部使用 Runtime::FromExisting(app->renderer())。
-auto window = app.CreateWindow(800, 540); // 逻辑像素；默认 Titled | Resizable。
+auto window = app.NewWindow(800, 540); // 逻辑像素；默认 Titled | Resizable。
 window.SetCallbacks({[&] { app.Close(); }, {}});
 auto view = runtime.CreateView(window.native()->device_width(),
                                window.native()->device_height(),
@@ -480,7 +480,9 @@ AppCore 会保留已注册的 FileSystem、FontLoader、Logger 等服务，只�
 预先注册自定义 GPUDriver 或 SurfaceFactory 时，窗口封装返回 `Unsupported`，因为 AppCore 无法用它们
 展示页面；这种宿主可以只复用系统字体服务。
 
-`Application::CreateWindow(width, height, fullscreen, flags, monitor)` 可创建多个窗口，默认使用主显示器。
+`Application::NewWindow(width, height, fullscreen, flags, monitor)` 可创建多个窗口，默认使用主显示器。
+旧 CreateWindow 入口保留；Windows 的同名宏会影响普通调用，跨平台代码应使用 NewWindow。
+若 Windows 代码仍使用旧入口，调用方需先 `#undef CreateWindow`；本库不修改调用方的 Win32 宏。
 `Window::AdoptPanel(view, PanelOptions)` 只接受本 Application 的 Runtime 创建、且尚未托管的 View。
 返回的 SDK Panel 句柄用于布局配置、隐藏/显示或查询；一个 View 只托管一次，关闭后不重用。
 View 初始尺寸是**设备像素**。从 `default_view_config()` 取得字体、编辑行为、display ID、scale 和

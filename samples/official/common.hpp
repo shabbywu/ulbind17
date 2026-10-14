@@ -86,9 +86,9 @@ class Host {
         return ulbind17::appcore::Application::Create(settings);
     }
     Page &CreatePage(const char *title, double width, double height) {
-        auto window = app.CreateWindow(width, height, false,
-                                       ultralight::WindowFlags::Titled | ultralight::WindowFlags::Resizable |
-                                           ultralight::WindowFlags::Hidden);
+        auto window = app.NewWindow(width, height, false,
+                                    ultralight::WindowFlags::Titled | ultralight::WindowFlags::Resizable |
+                                        ultralight::WindowFlags::Hidden);
         auto page = std::make_unique<Page>(std::move(window), runtime);
         auto *state = page.get();
         state->window.native()->SetTitle(title);
@@ -123,7 +123,13 @@ class Host {
         return *state;
     }
     void Run(std::function<void()> update = {}, std::function<bool()> verify = {}) {
-        auto deadline = Clock::now() + std::chrono::seconds(30);
+        // Mesa software rendering may compile expensive scene shaders on the first frame.
+#if defined(__linux__)
+        constexpr int smoke_seconds = 90;
+#else
+        constexpr int smoke_seconds = 30;
+#endif
+        auto deadline = Clock::now() + std::chrono::seconds(smoke_seconds);
         bool validated = false;
         while (app.RunOnce(0.002)) {
             if (!error_.empty())
@@ -132,7 +138,20 @@ class Host {
                 update();
             if (!options.smoke)
                 continue;
-            Check(Clock::now() < deadline, "Official sample smoke timed out");
+            if (Clock::now() >= deadline) {
+                for (auto &page : pages_) {
+                    std::cerr << "Smoke state: DOM=" << page->ready
+                              << " panel_height=" << page->panel->bounds().height()
+                              << " visible=" << page->window.native()->is_visible() << '\n';
+                    if (page->ready)
+                        std::cerr
+                            << page->String(
+                                   "JSON.stringify({errors: __sampleErrors, scene: "
+                                   "typeof scene === 'object' ? {info: scene.info(), perf: scene.perf()} : null})")
+                            << '\n';
+                }
+                throw std::runtime_error("Official sample smoke timed out");
+            }
             bool ready = true;
             for (auto &page : pages_) {
                 if (!page->ready || page->panel->bounds().height() <= 0) {
