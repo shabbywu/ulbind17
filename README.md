@@ -58,7 +58,7 @@ macOS CI 启用 `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS`：若 GLFW 无法初始化
 OpenGL 上下文，测试输出具体错误并以退出码 77 标记为 `Skipped`。默认本地测试仍要求图形环境可用；
 也可显式运行 `Sample5 --smoke-test --allow-unavailable-graphics` 使用相同行为。
 上下文创建后的加载器、像素检查和点击回调错误仍会导致测试失败。Linux CI 在 Xvfb 下执行实际渲染检查。
-Windows CI 编译 Sample5，并在运行 CTest 时排除 `Sample5.smoke`；本地仍可手动运行该测试。
+Windows CI 编译全部示例，运行 CTest 时排除 Sample5 和 AppCore 桌面测试；本地可在桌面会话中手动运行。
 
 ## 在其他 CMake 项目中使用
 
@@ -514,3 +514,11 @@ AppCore 测试覆盖系统字体及中文 fallback、首次路径规则、两种
 启用 `ULBIND17_BUILD_OFFICIAL_SAMPLES=ON`（需要 AppCore）构建桌面样例；
 独立的 `ULBIND17_BUILD_GAME_UI_HOST_SAMPLE=ON` 提供不依赖 AppCore 的游戏 UI 离屏宿主示例，
 展示自定义循环、输入转发和 CPU 帧读取。构建、验证及资源来源见 [samples/official/README.md](samples/official/README.md)。
+
+### Release 示例附件
+
+发布 GitHub Release 时，CI 构建全部示例并上传每个平台一个 ZIP：
+`ulbind17-samples-windows-x64.zip`、`ulbind17-samples-linux-x64.zip`、
+`ulbind17-samples-macos-arm64.zip`。压缩包包含示例程序、运行库、页面资源及许可文件，
+每个示例位于独立目录。解压后，Linux/Windows 从示例目录运行程序；macOS 打开对应 `.app`。
+普通 CI 与手动运行也会生成同名 workflow artifacts，供下载验证。

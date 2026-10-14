@@ -92,3 +92,36 @@ endif()
 if(ULBIND17_BUILD_OFFICIAL_SAMPLES OR ULBIND17_BUILD_GAME_UI_HOST_SAMPLE)
   add_subdirectory(official)
 endif()
+
+# Record actual output paths, including multi-config output directories and
+# bundles.
+get_property(
+  _sample_targets
+  DIRECTORY
+  PROPERTY BUILDSYSTEM_TARGETS)
+if(ULBIND17_BUILD_OFFICIAL_SAMPLES OR ULBIND17_BUILD_GAME_UI_HOST_SAMPLE)
+  get_property(
+    _official_targets
+    DIRECTORY official
+    PROPERTY BUILDSYSTEM_TARGETS)
+  list(APPEND _sample_targets ${_official_targets})
+endif()
+set(_sample_manifest "")
+foreach(_target IN LISTS _sample_targets)
+  get_target_property(_type ${_target} TYPE)
+  if(_type STREQUAL "EXECUTABLE")
+    get_target_property(_bundle ${_target} MACOSX_BUNDLE)
+    if(APPLE AND _bundle)
+      string(APPEND _sample_manifest
+             "${_target}|$<TARGET_BUNDLE_DIR:${_target}>\n")
+    else()
+      string(APPEND _sample_manifest "${_target}|$<TARGET_FILE:${_target}>\n")
+    endif()
+  endif()
+endforeach()
+get_filename_component(_sdk_root "${ULTRALIGHT_RESOURCES_DIR}" DIRECTORY)
+string(APPEND _sample_manifest "sdk-licenses|${_sdk_root}/license\n")
+file(
+  GENERATE
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/release-manifest-$<CONFIG>.txt"
+  CONTENT "${_sample_manifest}")

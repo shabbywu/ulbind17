@@ -40,8 +40,9 @@ repos:
   rev: "v0.1.6"
   hooks:
     - id: ruff
-      args: ["--fix", "--show-fixes"]
+      args: ["--fix", "--show-fixes", "--config", ".ruff.toml"]
     - id: ruff-format
+      args: ["--config", ".ruff.toml"]
       exclude: ^(docs)
 
 # Changes tabs to spaces

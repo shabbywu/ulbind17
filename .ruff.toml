@@ -1,0 +1,3 @@
+# Keep standalone repository tools independent of parent workspace configuration.
+target-version = "py39"
+line-length = 88

@@ -2,6 +2,11 @@ name: Build
 on:
   workflow_dispatch:
   pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.actor }}-${{ github.head_ref || github.run_number }}-${{ github.ref }}
@@ -22,24 +27,33 @@ jobs:
         include:
           - name: Windows x64 / MSVC
             os: windows-2022
+            platform: windows-x64
+            build_dir: Windows
             triplet: x64-windows
             env: {}
-            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release']"
+            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release', '-DULBIND17_ENABLE_APPCORE=ON', '-DULBIND17_BUILD_APPCORE_SAMPLE=ON', '-DULBIND17_BUILD_OFFICIAL_SAMPLES=ON', '-DULBIND17_BUILD_GAME_UI_HOST_SAMPLE=ON']"
           - name: Linux x64 / GCC
             os: ubuntu-24.04
+            platform: linux-x64
+            build_dir: Linux
             triplet: x64-linux
             env:
               CC: gcc-13
               CXX: g++-13
-            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release']"
+            args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release', '-DULBIND17_ENABLE_APPCORE=ON', '-DULBIND17_BUILD_APPCORE_SAMPLE=ON', '-DULBIND17_BUILD_OFFICIAL_SAMPLES=ON', '-DULBIND17_BUILD_GAME_UI_HOST_SAMPLE=ON']"
           - name: macOS arm64 / Clang
             os: macos-15
+            platform: macos-arm64
+            build_dir: Darwin
             triplet: arm64-osx
             env: {}
             args: "['-DENABLE_TEST=ON', '-DULTRALIGHT_SDK_VERSION=2.0.0-beta.2', '-DCMAKE_BUILD_TYPE=Release', '-DCMAKE_OSX_ARCHITECTURES=arm64', '-DULBIND17_ALLOW_UNAVAILABLE_GRAPHICS=ON', '-DULBIND17_ENABLE_APPCORE=ON', '-DULBIND17_BUILD_APPCORE_SAMPLE=ON', '-DULBIND17_BUILD_OFFICIAL_SAMPLES=ON', '-DULBIND17_BUILD_GAME_UI_HOST_SAMPLE=ON']"
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: lukka/get-cmake@latest
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -66,7 +80,38 @@ jobs:
         run: xvfb-run -a ctest --test-dir build/Linux -C Release --output-on-failure
       - name: Test Windows
         if: runner.os == 'Windows'
-        run: ctest --test-dir build/Windows -C Release --output-on-failure -E '^Sample5[.]smoke$'
+        run: ctest --test-dir build/Windows -C Release --output-on-failure -E '^(Sample5[.]smoke|AppCoreExample[.]|Official|appcore[.])'
       - name: Test macOS
         if: runner.os == 'macOS'
         run: ctest --test-dir build/Darwin -C Release --output-on-failure
+      - name: Package samples
+        shell: bash
+        run: >-
+          python tools/package_samples.py
+          --manifest "build/${{ matrix.build_dir }}/samples/release-manifest-Release.txt"
+          --output "dist/ulbind17-samples-${{ matrix.platform }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ulbind17-samples-${{ matrix.platform }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Attach sample archives
+    if: github.event_name == 'release'
+    needs: cmake
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ulbind17-samples-*
+          merge-multiple: true
+          path: dist
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" dist/*.zip --clobber
