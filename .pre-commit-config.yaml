@@ -12,6 +12,9 @@
 #
 # See https://github.com/pre-commit/pre-commit
 
+# Preserve vendored SDK assets and license texts byte-for-byte.
+exclude: ^samples/official/(?!11-multi-window/assets/editor[.]html$)([^/]+/assets/|licenses/)
+
 ci:
   autoupdate_commit_msg: "chore: update pre-commit hooks"
   autofix_commit_msg: "style: pre-commit fixes"

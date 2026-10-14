@@ -88,3 +88,7 @@ if(ULBIND17_BUILD_APPCORE_SAMPLE)
                  "${CMAKE_CURRENT_BINARY_DIR}/isolated")
   endif()
 endif()
+
+if(ULBIND17_BUILD_OFFICIAL_SAMPLES OR ULBIND17_BUILD_GAME_UI_HOST_SAMPLE)
+  add_subdirectory(official)
+endif()

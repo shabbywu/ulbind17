@@ -36,6 +36,10 @@ ctest --test-dir build/local --output-on-failure
 | `ENABLE_TEST` | OFF | 构建全部五个示例 |
 | `ULBIND17_BUILD_RENDERING_SAMPLE` | `ENABLE_TEST` 的值 | 单独控制 GLFW/GLAD 渲染示例的构建 |
 | `ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS` | OFF | 图形环境不可用时，允许 CTest 将渲染冒烟测试标记为跳过 |
+| `ULBIND17_ENABLE_APPCORE` | OFF | 提供可选的 AppCore 集成 target |
+| `ULBIND17_BUILD_APPCORE_SAMPLE` | OFF | 构建 AppCore 字体、窗口与输入示例 |
+| `ULBIND17_BUILD_OFFICIAL_SAMPLES` | OFF | 构建 SDK 桌面示例，需要启用 AppCore |
+| `ULBIND17_BUILD_GAME_UI_HOST_SAMPLE` | OFF | 构建游戏 UI 离屏示例 |
 
 控制台测试不依赖 GLFW 或 GLAD。构建 Sample5 时，可以设置 `VCPKG_ROOT` 后使用项目的
 vcpkg 预设，也可以自行提供已安装的 GLFW/GLAD CMake 包：
@@ -72,7 +76,7 @@ ulbind17_copy_runtime_files(my_app)
 使用内嵌资源时，不需要再复制外部 ICU 数据或证书包。
 自行提供文件系统和资源的应用也可以使用 SDK 的 `ultralight_copy_runtime_files()` 辅助函数。
 
-Python 扩展、Godot 插件等共享库或模块库也可以调用相同的复制函数：
+共享库或模块库也可以调用相同的复制函数：
 
 ```cmake
 target_link_libraries(my_extension PRIVATE ulbind17::ulbind17)
@@ -86,7 +90,7 @@ macOS 的库从 `@loader_path/` 查找同目录依赖，Linux 使用 `$ORIGIN`�
 ## 通用宿主运行时
 
 `<ulbind17/runtime.hpp>` 提供可选的 `Runtime`、`ManagedView` 和 CPU 像素接口。
-实现仍为头文件，不依赖 Python、Godot、窗口库或图片编码器。
+实现为头文件，支持自定义宿主循环与 CPU 像素读取。
 
 ```cpp
 #include <ulbind17/setup.hpp>
@@ -175,8 +179,8 @@ GPU View 没有 CPU Surface，读取时报 `ErrorCode::Unsupported`，宿主直�
 
 ## 动态 JavaScriptCore 桥接
 
-`<ulbind17/jsc/Bridge.hpp>` 面向运行时类型的宿主适配器；Godot Variant、Python 对象和引用计数
-由各自的外部项目转换。JSC 的原始句柄与类型化 SDK 的 `js::Value::raw()` 是不同类型，不能混用。
+`<ulbind17/jsc/Bridge.hpp>` 提供动态类型桥接接口；宿主负责自身对象的类型转换与引用管理。
+JSC 的原始句柄与类型化 SDK 的 `js::Value::raw()` 是不同类型，不能混用。
 手工创建 Bridge 时须在 View 的 JS 上下文锁内调用 `Bridge::create(lock->ctx(), view)`，
 并在导航和销毁时主动 `invalidate()`；ManagedView 自动处理这一步。
 
@@ -327,7 +331,7 @@ auto disk = files.OpenFile("resources/cacert.pem");
 
 内嵌模式链接 `ulbind17::ulbind17`，文件模式可只链接 `ulbind17::header`。
 两种模式仅识别 ICU 和证书文件，匹配时规范化资源前缀与请求路径；未匹配的请求返回 false/nullptr，交由调用方的文件系统处理。
-Godot 插件应选择内嵌模式，普通项目内容继续使用 Godot `FileAccess`。
+需要将 SDK 数据随二进制分发时，可选择内嵌模式；页面资源可由自定义 FileSystem 提供。
 
 使用 `FileSystemOverlay` 可以复用资源优先、宿主文件系统兜底的组合逻辑：
 
@@ -375,7 +379,7 @@ GLFW 示例继续显示 CPU 渲染的 BitmapSurface，没有实现新版 Ultrali
 `<ulbind17/appcore.hpp>` 提供 `ulbind17::appcore::Application` 和 `Window`。
 开启 `ULBIND17_ENABLE_APPCORE` 后，链接 `ulbind17::appcore`；该 target 只依赖
 `ulbind17::header` 和 `Ultralight::AppCore`，不强制链接内嵌资源。
-原有核心 target 及独立 Renderer 的驱动方式保持不变。此集成以 **2.0.0-beta.2** 为验收基线。
+原有核心 target 及独立 Renderer 的驱动方式保持不变。此集成已在 **2.0.0-beta.2** 上验证。
 
 ### 独立 Renderer 使用系统字体
 
@@ -473,7 +477,7 @@ App、Window、View 操作和最终析构必须在 App/Renderer 的主线程进�
   Application 关闭后尚未执行的 Runtime 任务被抑制。
 
 系统服务的进程级单例由 SDK 保证；头文件句柄注册状态仍仅在同一二进制内共享。
-跨 Python/Godot 等扩展模块时，应由单一宿主传递同一 Renderer，并负责驱动和关闭。
+跨扩展模块共享 Renderer 时，应由单一宿主传递同一 Renderer，并负责驱动和关闭。
 
 ### macOS ARM64 示例与验证
 
@@ -503,3 +507,10 @@ AppCore 测试覆盖系统字体及中文 fallback、首次路径规则、两种
 焦点/editor listener、首行 Bridge 绑定、主/子框架导航、加载失败、回调异常、Promise 取消、
 关闭重入、共享句柄失效、像素锁和主线程约束。涉及 AppCore 窗口的测试需要原生桌面会话；
 真实窗口拖动、跨屏 DPI 和中文 IME 仍需在交互示例中验证。
+
+### SDK 示例
+
+提供使用 Runtime、ManagedView 与 Bridge 的 Ultralight SDK 示例。
+启用 `ULBIND17_BUILD_OFFICIAL_SAMPLES=ON`（需要 AppCore）构建桌面样例；
+独立的 `ULBIND17_BUILD_GAME_UI_HOST_SAMPLE=ON` 提供不依赖 AppCore 的游戏 UI 离屏宿主示例，
+展示自定义循环、输入转发和 CPU 帧读取。构建、验证及资源来源见 [samples/official/README.md](samples/official/README.md)。
