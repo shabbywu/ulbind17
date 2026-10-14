@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
-option(ENABLE_TEST "Build all samples (including the GLFW rendering sample)" OFF)
+option(ENABLE_TEST "Build all samples (including the GLFW rendering sample)"
+       OFF)
 project(ulbind17 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -8,8 +9,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_TESTING "Build ulbind17 regression tests" ${PROJECT_IS_TOP_LEVEL})
 include(CTest)
-option(ULBIND17_BUILD_RENDERING_SAMPLE "Build the GLFW/GLAD rendering sample" ${ENABLE_TEST})
-option(ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS "Allow the GUI smoke test to skip when graphics are unavailable" OFF)
+option(ULBIND17_BUILD_RENDERING_SAMPLE "Build the GLFW/GLAD rendering sample"
+       ${ENABLE_TEST})
+option(ULBIND17_ENABLE_APPCORE "Enable the optional AppCore integration target"
+       OFF)
+option(ULBIND17_BUILD_APPCORE_SAMPLE "Build the AppCore desktop example" OFF)
+if(ULBIND17_BUILD_APPCORE_SAMPLE AND NOT ULBIND17_ENABLE_APPCORE)
+  message(
+    FATAL_ERROR
+      "ULBIND17_BUILD_APPCORE_SAMPLE requires ULBIND17_ENABLE_APPCORE=ON")
+endif()
+option(ULBIND17_ALLOW_UNAVAILABLE_GRAPHICS
+       "Allow the GUI smoke test to skip when graphics are unavailable" OFF)
 
 set(ULBINDING_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXTRA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/externals/include)
@@ -32,7 +43,20 @@ add_library(ulbind17 INTERFACE)
 target_link_libraries(ulbind17 INTERFACE ulbind17_header embedded_resources)
 add_library(ulbind17::ulbind17 ALIAS ulbind17)
 
-if(ENABLE_TEST OR BUILD_TESTING OR ULBIND17_BUILD_RENDERING_SAMPLE)
+if(ULBIND17_ENABLE_APPCORE)
+  if(NOT TARGET Ultralight::AppCore)
+    message(FATAL_ERROR "The selected SDK does not provide Ultralight::AppCore")
+  endif()
+  add_library(ulbind17_appcore INTERFACE)
+  target_link_libraries(ulbind17_appcore INTERFACE ulbind17::header
+                                                   Ultralight::AppCore)
+  add_library(ulbind17::appcore ALIAS ulbind17_appcore)
+endif()
+
+if(ENABLE_TEST
+   OR BUILD_TESTING
+   OR ULBIND17_BUILD_RENDERING_SAMPLE
+   OR ULBIND17_BUILD_APPCORE_SAMPLE)
   add_subdirectory(samples)
 endif()
 if(BUILD_TESTING)

@@ -369,3 +369,137 @@ GLFW 示例继续显示 CPU 渲染的 BitmapSurface，没有实现新版 Ultrali
 
 事件分发不自动驱动渲染。宿主应继续执行 `Update`、`RefreshDisplay`、`Render`；
 某些滚动效果需要完整的帧循环才能推进。
+
+## 可选 AppCore 桌面集成
+
+`<ulbind17/appcore.hpp>` 提供 `ulbind17::appcore::Application` 和 `Window`。
+开启 `ULBIND17_ENABLE_APPCORE` 后，链接 `ulbind17::appcore`；该 target 只依赖
+`ulbind17::header` 和 `Ultralight::AppCore`，不强制链接内嵌资源。
+原有核心 target 及独立 Renderer 的驱动方式保持不变。此集成以 **2.0.0-beta.2** 为验收基线。
+
+### 独立 Renderer 使用系统字体
+
+```cpp
+#include <ulbind17/appcore.hpp>
+
+// 先安装宿主 FileSystem、Logger 和 Config，并确保服务的生命周期覆盖 Renderer。
+// 如果需要原有内嵌资源，也可以先调用 setup_ultralight_platform()。
+ulbind17::appcore::UseSystemFontLoader();
+auto runtime = ulbind17::Runtime::Create();
+// 后续仍由宿主调用 runtime.Update()/RefreshDisplay()/Render()。
+```
+
+`UseSystemFontLoader()` 显式选择 AppCore 的系统字体，只修改 FontLoader，保留自定义
+FileSystem、Logger、GPUDriver、SurfaceFactory 等 handler。它必须在创建任何 Renderer/App 前调用；
+对本二进制已经注册的 Renderer 或已有 App 调用会返回 `Busy`。原生 SDK Renderer 的创建绕过
+本库注册表时，宿主仍须自行保证初始化顺序。
+
+AppCore 的 `GetPlatformFontLoader()`、`GetPlatformFileSystem(baseDir)` 和
+`GetDefaultLogger(logPath)` 返回 SDK 拥有的进程级单例，**不要 delete**。
+FileSystem 和 Logger 的路径仅在首次获取时生效，后续参数不会重设路径。
+直接调用 `GetPlatformFileSystem()` 时，相对目录以工作目录为基准；
+`App::Create()` 的 `Settings::file_system_path` 则以可执行文件目录为基准，
+macOS 上以 `.app/Contents/Resources/` 为基准。自定义 handler 的所有权仍属于宿主。
+
+### 应用、窗口与 ManagedView
+
+```cpp
+#include <ulbind17/appcore.hpp>
+
+namespace ac = ulbind17::appcore;
+auto app = ac::Application::Create();
+auto runtime = app.runtime(); // 内部使用 Runtime::FromExisting(app->renderer())。
+auto window = app.CreateWindow(800, 540); // 逻辑像素；默认 Titled | Resizable。
+window.SetCallbacks({[&] { app.Close(); }, {}});
+auto view = runtime.CreateView(window.native()->device_width(),
+                               window.native()->device_height(),
+                               window.native()->default_view_config());
+auto panel = window.AdoptPanel(view); // 默认填满窗口。
+// 在 LoadHTML/LoadURL 前设置 ViewCallbacks；每次主框架 window_ready 中注册 Bridge。
+view.LoadHTML("<body>系统字体与 AppCore 窗口</body>");
+view.Focus(); // 自动转到 Panel::Focus()。
+while (app.RunOnce(0.002)) {
+    // 宿主工作；不再调用 Renderer 的 Update、RefreshDisplay 或 Render。
+}
+app.Close();
+```
+
+`Application::Create(Settings, Config)` 创建并管理一个 App；同一二进制内重复调用共享已有状态，
+首次 Settings/Config 生效。关闭后不重新创建。先创建独立 Renderer 再创建 Application 会被拒绝。
+AppCore 会保留已注册的 FileSystem、FontLoader、Logger 等服务，只补齐未设置的服务。
+它会调整 SDK 规定的 Config 字段，包括 clockwise face winding、默认 cache path 和自动 font profile。
+预先注册自定义 GPUDriver 或 SurfaceFactory 时，窗口封装返回 `Unsupported`，因为 AppCore 无法用它们
+展示页面；这种宿主可以只复用系统字体服务。
+
+`Application::CreateWindow(width, height, fullscreen, flags, monitor)` 可创建多个窗口，默认使用主显示器。
+`Window::AdoptPanel(view, PanelOptions)` 只接受本 Application 的 Runtime 创建、且尚未托管的 View。
+返回的 SDK Panel 句柄用于布局配置、隐藏/显示或查询；一个 View 只托管一次，关闭后不重用。
+View 初始尺寸是**设备像素**。从 `default_view_config()` 取得字体、编辑行为、display ID、scale 和
+GPU/CPU 配置；Panel 在后续布局和 DPI 改变时自动维护 View，不需要宿主重复 Resize。
+
+托管不会替换 ManagedView 的 LoadListener/ViewListener，因此现有 Bridge、加载回调、异常处理及
+主框架导航失效规则继续适用。**不要替换托管 View 的 editor listener**，AppCore 用它处理 IME。
+`ManagedView::Focus()` 经由 Panel；`Unfocus()` 仅在本 Panel 正持有焦点时清除窗口焦点，
+不会清除其他 Panel 的焦点。真实 OS 输入由 AppCore 自动发送，避免宿主再次转发相同事件。
+
+`Window::SetCallbacks(WindowCallbacks)` 替换整组窗口回调，包含 `closed()` 和
+`resized(double width, double height)`，后者使用逻辑像素。窗口回调的异常转交 Runtime 错误处理器，
+错误处理器的异常也会被隔离。App/Window/Panel 的原生借用接口用于配置和查询；不要通过它们替换
+监听器、移除受管理 Panel、直接驱动 Renderer 或销毁 App。使用 `Window::Close()` 和 `ManagedView::Close()`
+管理托管关系。回调不要按值捕获自己所在的 Window/Application/ManagedView，以免形成引用环。
+
+### 驱动与关闭
+
+`RunOnce(max_wait_seconds = 0)` 处理系统事件、更新 Renderer，并按 SDK 的显示节奏渲染/展示。
+传入 0 不主动等待，非负有限值控制等待上限；宿主应重复调用它。
+macOS 的 `RunOnce()` 手动泵送事件，与 SDK `Run()` 的菜单快捷键分派可能有差异。
+附着 AppCore 后，所有共享 Runtime 句柄的 `Update/RefreshDisplay/Render` 返回 `Unsupported`，
+防止双重驱动；原生指针绕过封装时，互斥规则仍由宿主保证。
+`Runtime::PostTask()` 继续可用，与 AppCore 共用 SDK 任务队列。
+
+App、Window、View 操作和最终析构必须在 App/Renderer 的主线程进行。`RunOnce()` 不允许嵌套，
+也不能在像素锁、输入分派或 `WithBridge()` 作用域中调用，违规返回 `Busy`。
+在 SDK 更新期间触发的回调和 PostTask 中需要进一步发送输入时，安排在当前 RunOnce 返回后执行。
+
+- Window 关闭会同时关闭它托管的所有 ManagedView。先停止页面回调、失效 Bridge 和取消 Promise，
+  再移除 Panel、关闭原生窗口，最后发送窗口 `closed` 回调。
+- 单独关闭 ManagedView 会移除它的 Panel，窗口仍存活。释放最后一个 Window 句柄也会关闭窗口；
+  Window 持有托管 View，释放外部 ManagedView 句柄不会让页面从窗口消失。
+- Application `Close()` 先停止循环，然后关闭所有窗口及 View、关闭 Runtime 并释放其 Renderer 引用，
+  最后释放 App。直接调用附着的 Runtime `Close()` 会执行同一套关闭流程。
+- Window、Runtime 和存活的 View 会保活 App；释放 Application 句柄不会使它们悬空。
+  回调中允许关闭，当前原生调用的 App/Renderer/View 引用保留到调用返回。
+- `Close()` 幂等；关闭后的 `RunOnce()` 返回 false，其他操作返回 `Closed`，旧 Bridge Handle 返回 `PageGone`。
+  Application 关闭后尚未执行的 Runtime 任务被抑制。
+
+系统服务的进程级单例由 SDK 保证；头文件句柄注册状态仍仅在同一二进制内共享。
+跨 Python/Godot 等扩展模块时，应由单一宿主传递同一 Renderer，并负责驱动和关闭。
+
+### macOS ARM64 示例与验证
+
+```sh
+cmake -S . -B build/appcore \
+  -DULTRALIGHT_SDK_VERSION=2.0.0-beta.2 \
+  -DCMAKE_OSX_ARCHITECTURES=arm64 \
+  -DULBIND17_ENABLE_APPCORE=ON \
+  -DULBIND17_BUILD_APPCORE_SAMPLE=ON
+cmake --build build/appcore -j
+./build/appcore/samples/AppCoreExample.app/Contents/MacOS/AppCoreExample
+ctest --test-dir build/appcore -R 'appcore[.]|AppCoreExample' --output-on-failure
+```
+
+示例显示系统字体、中文、IME 输入框、Bridge 调用结果、页面尺寸与 devicePixelRatio。
+拖动窗口边缘验证 resize，移动到不同 DPI 的显示器验证 scale 和布局更新。
+`--smoke-test` 在页面与 Panel 布局就绪后检查 Bridge、窗口可见性和 DPI，并自动关闭；
+`--cpu` 可验证 CPU 展示路径，默认跟随 AppCore 的 GPU/CPU 选择。
+
+使用 AppCore 的应用可调用 `ulbind17_copy_runtime_files(target INCLUDE_APPCORE ON)` 复制动态库并设置 rpath。
+该函数不复制页面和 SDK 数据资源。示例将所选 SDK 的资源复制到
+`.app/Contents/Resources/assets/resources/`；其他平台复制到可执行文件旁的 `assets/resources/`，
+与默认 `Settings::file_system_path` 和 `Config::resource_path_prefix` 对应。
+宿主若使用内嵌 SDKResources/FileSystemOverlay，则自行注册该 FileSystem 并保持其存活，无需复制数据文件。
+
+AppCore 测试覆盖系统字体及中文 fallback、首次路径规则、两种 scale、Panel 布局 resize 和 macOS 原生窗口 resize、
+焦点/editor listener、首行 Bridge 绑定、主/子框架导航、加载失败、回调异常、Promise 取消、
+关闭重入、共享句柄失效、像素锁和主线程约束。涉及 AppCore 窗口的测试需要原生桌面会话；
+真实窗口拖动、跨屏 DPI 和中文 IME 仍需在交互示例中验证。
