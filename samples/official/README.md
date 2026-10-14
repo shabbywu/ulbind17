@@ -29,7 +29,8 @@ ctest --test-dir build/appcore -R 'Official|GameUIHostAdapter' --output-on-failu
 其他桌面样例的可执行文件位于各自目录中的同名 `.app/Contents/MacOS/` 下。
 支持 `--smoke-test` 自动验证并关闭、`--cpu` 使用 CPU 展示；13 还支持 `--scene NAME`。
 所有桌面样例只由 `Application::RunOnce()` 驱动，窗口关闭触发统一关闭流程。
-页面每次创建主框架上下文时重新绑定 Bridge；保留句柄在导航后按现有规则失效。
+05 和 11 使用独立 API 注册表，在加载前 AttachTo ManagedView，导航后由 SDK 自动重新注入。
+其他文档级 Bridge 操作继续使用 WithBridge，保留句柄在导航后按现有规则失效。
 
 样例各自复制动态库、页面与 SDK 数据资源，避免不同样例的 `assets/app.html` 冲突。
 构建时会重新复制资源，修改 HTML 后再次构建即可。桌面测试需要原生桌面会话。

@@ -158,6 +158,7 @@ if(ULBIND17_ENABLE_APPCORE)
           bridge-close
           input-close
           window-owner
+          typed-api
           ${_appcore_platform_cases})
     file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/appcore-${_case}")
     add_test(NAME appcore.${_case} COMMAND ulbind17_appcore_tests ${_case})
@@ -167,3 +168,15 @@ if(ULBIND17_ENABLE_APPCORE)
                  "${CMAKE_CURRENT_BINARY_DIR}/appcore-${_case}")
   endforeach()
 endif()
+
+add_executable(ulbind17_api_tests api.cpp)
+target_link_libraries(ulbind17_api_tests PRIVATE ulbind17::ulbind17
+                                                 Threads::Threads)
+ulbind17_copy_runtime_files(ulbind17_api_tests INCLUDE_APPCORE OFF)
+foreach(_case IN ITEMS registration lifetime constraints origins frames
+                       callback-close)
+  add_test(NAME api.${_case} COMMAND ulbind17_api_tests ${_case})
+  set_tests_properties(
+    api.${_case} PROPERTIES TIMEOUT 30 WORKING_DIRECTORY
+                            "${CMAKE_CURRENT_BINARY_DIR}/isolated")
+endforeach()

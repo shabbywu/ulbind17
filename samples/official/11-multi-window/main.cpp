@@ -1,4 +1,5 @@
 #include "../common.hpp"
+#include <ulbind17/API.hpp>
 
 int main(int argc, char **argv) {
     return official::Main([&] {
@@ -8,19 +9,13 @@ int main(int argc, char **argv) {
         editor.window.native()->MoveTo(50, 50);
         preview.window.native()->MoveTo(700, 50);
         unsigned updates = 0;
-        editor.bind = [&](auto &bridge) {
-            auto weak = std::weak_ptr(bridge.shared_from_this());
-            bridge.bindFunc("__updateEditor", [weak, &preview, &updates](JSContextRef context, JSObjectRef,
-                                                                         std::span<const JSValueRef> args) {
-                auto bridge = weak.lock();
-                official::Check(bool(bridge) && args.size() == 1, "updateEditor expects one HTML string");
-                preview.ready = false;
-                preview.view.LoadHTML(bridge->readString(args[0]));
-                ++updates;
-                return JSValueMakeUndefined(context);
-            });
-            bridge.evaluateRetained("globalThis.native = Object.freeze({updateEditor: __updateEditor});");
-        };
+        ulbind17::API api("native");
+        api.Bind("updateEditor", [&](std::string html) {
+            preview.ready = false;
+            preview.view.LoadHTML(html);
+            ++updates;
+        });
+        official::Check(api.AttachTo(editor.view), "API attachment failed");
         preview.Load("file:///preview.html");
         editor.Load("file:///editor.html");
         bool sent = false;

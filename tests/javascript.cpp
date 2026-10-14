@@ -1,7 +1,7 @@
 #include "../samples/common.hpp"
-#include <ulbind17/jsc/Bridge.hpp>
 #include <optional>
 #include <thread>
+#include <ulbind17/jsc/Bridge.hpp>
 
 namespace js = ulbind17::js;
 using sample::check;
@@ -39,7 +39,8 @@ void conveniences() {
     take(global.call<void>("hello", "void result"));
     check(take(context.Evaluate<bool>("voidCalled")), "void function facade failed");
     auto thrown = ulbind17::Script(context, "throw new Error('checked failure')").Evaluate();
-    check(!thrown && thrown.error().message().find("checked failure") != std::string::npos, "script exception was lost");
+    check(!thrown && thrown.error().message().find("checked failure") != std::string::npos,
+          "script exception was lost");
     take(object.set("method", take(context.Evaluate("(function(){return this.number})"))));
     check(take(object.call<int>("method")) == 7, "method receiver was lost");
 }
@@ -57,15 +58,18 @@ void scaffold() {
     ulbind17::jsc::String source("echo('中文 🐉')");
     check(ulbind17::jsc::text(context, bridge->evaluate(source)) == "中文 🐉", "JSC scaffold binding failed");
     int number = 0;
-    auto proxy = bridge->makeObject(42,
-        [&number](JSContextRef context, JSStringRef) { return JSValueMakeNumber(context, number); },
+    auto proxy = bridge->makeObject(
+        42, [&number](JSContextRef context, JSStringRef) { return JSValueMakeNumber(context, number); },
         [&number](JSContextRef context, JSStringRef, JSValueRef value) {
-            number = static_cast<int>(JSValueToNumber(context, value, nullptr)); return true;
+            number = static_cast<int>(JSValueToNumber(context, value, nullptr));
+            return true;
         });
     check(bridge->unwrap<int>(proxy) && *bridge->unwrap<int>(proxy) == 42, "native proxy identity was lost");
-    ulbind17::jsc::String name("native"); bridge->bind(name, proxy);
+    ulbind17::jsc::String name("native");
+    bridge->bind(name, proxy);
     ulbind17::jsc::String assign("native.value = 12; native.value");
-    check(JSValueToNumber(context, bridge->evaluate(assign), nullptr) == 12 && number == 12, "proxy getter/setter failed");
+    check(JSValueToNumber(context, bridge->evaluate(assign), nullptr) == 12 && number == 12,
+          "proxy getter/setter failed");
     bridge->bindFunc("throwing", [](JSContextRef, JSObjectRef, std::span<const JSValueRef>) -> JSValueRef {
         throw std::runtime_error("native failure");
     });
@@ -75,7 +79,8 @@ void scaffold() {
     try {
         ulbind17::jsc::text(context, bridge->evaluate(bad_text));
         throw std::logic_error("throwing string conversion was ignored");
-    } catch (const std::runtime_error &error) {
+    }
+    catch (const std::runtime_error &error) {
         check(std::string(error.what()).find("string failure") != std::string::npos, "string exception was lost");
     }
     bool settled = false;
@@ -94,17 +99,20 @@ void scaffold() {
     try {
         handle->value();
         throw std::logic_error("expired handle remained callable");
-    } catch (const std::runtime_error &error) {
+    }
+    catch (const std::runtime_error &error) {
         check(std::string(error.what()).find("expired") != std::string::npos, "expired handle error was lost");
     }
     std::thread releaser([handle = std::move(handle)]() mutable { handle.reset(); });
     releaser.join();
     js::Context sdk(fixture.view.get());
-    check(take(sdk.Evaluate<bool>("try{echo(1);false}catch(e){/expired/.test(e.message)}")), "saved callback entered expired bridge");
+    check(take(sdk.Evaluate<bool>("try{echo(1);false}catch(e){/expired/.test(e.message)}")),
+          "saved callback entered expired bridge");
     auto reentrant = ulbind17::jsc::Bridge::create(context, fixture.view.get());
-    reentrant->bindFunc("invalidateDuringCall", [weak = std::weak_ptr(reentrant)](
-        JSContextRef context, JSObjectRef, std::span<const JSValueRef>) {
-        weak.lock()->invalidate(); return JSValueMakeNumber(context, 42);
+    reentrant->bindFunc("invalidateDuringCall", [weak = std::weak_ptr(reentrant)](JSContextRef context, JSObjectRef,
+                                                                                  std::span<const JSValueRef>) {
+        weak.lock()->invalidate();
+        return JSValueMakeNumber(context, 42);
     });
     ulbind17::jsc::String invalidate("invalidateDuringCall()");
     check(reentrant->evaluate(invalidate) == nullptr, "invalidated evaluation returned an expired value");
@@ -116,11 +124,17 @@ js::Task<int> work(int number) {
 }
 js::Task<int> await_page(js::Value function) {
     auto result = co_await js::Await<int>(function());
-    if (!result) co_return std::move(result).error();
+    if (!result)
+        co_return std::move(result).error();
     co_return result.value() + 1;
 }
-js::Task<int> fail() { co_return js::Error::Make(js::ErrorType::Error, "async failure"); }
-js::Task<> void_work() { co_await js::RunOnWorker([] {}); co_return; }
+js::Task<int> fail() {
+    co_return js::Error::Make(js::ErrorType::Error, "async failure");
+}
+js::Task<> void_work() {
+    co_await js::RunOnWorker([] {});
+    co_return;
+}
 js::Task<int> worker_failure() {
     int value = co_await js::RunOnWorker([]() -> int { throw std::runtime_error("worker failure"); });
     co_return value;
@@ -128,14 +142,14 @@ js::Task<int> worker_failure() {
 
 void async() {
     sample::Fixture fixture;
-    ulbind17::Bindings bindings("native");
-    bindings.bindFunc("work", &work);
-    bindings.bindFunc("awaitPage", &await_page);
-    bindings.bindFunc("fail", &fail);
-    bindings.bindFunc("voidWork", &void_work);
-    bindings.bindFunc("workerFailure", &worker_failure);
+    ulbind17::API bindings("native");
+    bindings.Bind("work", &work);
+    bindings.Bind("awaitPage", &await_page);
+    bindings.Bind("fail", &fail);
+    bindings.Bind("voidWork", &void_work);
+    bindings.Bind("workerFailure", &worker_failure);
     std::optional<js::Resolver> deferred;
-    bindings.bindFunc("deferred", [&deferred](js::Resolver resolver) { deferred.emplace(std::move(resolver)); });
+    bindings.Bind("deferred", [&deferred](js::Resolver resolver) { deferred.emplace(std::move(resolver)); });
     check(bindings.AttachTo(fixture.view.get()), "async API attachment failed");
     js::Context context(fixture.view.get());
     auto promise = take(context.Evaluate(R"(
@@ -154,31 +168,37 @@ void async() {
     )"));
     pump(fixture, [&] { return deferred.has_value(); });
     std::thread worker([resolver = std::move(*deferred)] { resolver.Resolve(9); });
-    worker.join(); deferred.reset();
+    worker.join();
+    deferred.reset();
     bool settled = false;
     check(promise.Then([&](js::Result<js::Value> result) {
         auto value = take(std::move(result));
         check(take(ulbind17::get<int>(value, 0)) == 42 && take(ulbind17::get<int>(value, 1)) == 8 &&
-              take(ulbind17::get<int>(value, 2)) == 9 && take(ulbind17::get<std::string>(value, 3)) == "async failure",
+                  take(ulbind17::get<int>(value, 2)) == 9 &&
+                  take(ulbind17::get<std::string>(value, 3)) == "async failure",
               "async/await result or rejection was lost");
         check(take(ulbind17::get<bool>(value, 4)) && take(ulbind17::get<bool>(value, 5)) &&
-              take(ulbind17::get<bool>(value, 6)), "void task, worker exception or async argument error was lost: " + take(value.ToJSON()));
+                  take(ulbind17::get<bool>(value, 6)),
+              "void task, worker exception or async argument error was lost: " + take(value.ToJSON()));
         settled = true;
-    }), "Promise observer failed");
+    }),
+          "Promise observer failed");
     pump(fixture, [&] { return settled; });
     bool rejected = false;
     auto rejected_promise = take(context.Evaluate("Promise.reject(new Error('rejected'))"));
     check(rejected_promise.Then<int>([&](js::Result<int> result) {
         check(!result && result.error().message().find("rejected") != std::string::npos, "Promise rejection was lost");
         rejected = true;
-    }), "rejection observer failed");
+    }),
+          "rejection observer failed");
     pump(fixture, [&] { return rejected; });
 }
 
 js::Task<int> suspended(js::Value function, int *resumed) {
     auto result = co_await js::Await<int>(function());
     ++*resumed;
-    if (!result) co_return std::move(result).error();
+    if (!result)
+        co_return std::move(result).error();
     co_return result.value();
 }
 
@@ -186,15 +206,16 @@ void expiry() {
     sample::Fixture fixture;
     js::Context context(fixture.view.get());
     int resumed = 0;
-    auto bindings = std::make_unique<ulbind17::Bindings>("native");
-    bindings->bindFunc("suspended", [&resumed](js::Value function) { return suspended(function, &resumed); });
+    auto bindings = std::make_unique<ulbind17::API>("native");
+    bindings->Bind("suspended", [&resumed](js::Value function) { return suspended(function, &resumed); });
     check(bindings->AttachTo(fixture.view.get()), "expiry API attachment failed");
     auto pending = take(context.Evaluate("native.suspended(()=>new Promise(r=>globalThis.resume=r))"));
     bool rejected = false;
     check(pending.Then<int>([&](js::Result<int> result) {
         check(!result && result.error().code() == "ULJS_DETACHED", "API teardown did not reject suspended task");
         rejected = true;
-    }), "teardown observer failed");
+    }),
+          "teardown observer failed");
     bindings.reset();
     take(context.Evaluate("resume(123)"));
     pump(fixture, [&] { return rejected; });
@@ -204,8 +225,9 @@ void expiry() {
     auto bridge = ulbind17::jsc::Bridge::create(lock->ctx(), fixture.view.get());
     bool cancelled = false;
     ulbind17::jsc::String script("new Promise(()=>{})");
-    bridge->then(bridge->evaluate(script), [](JSValueRef, bool) { throw std::runtime_error("expired promise settled"); },
-                 [&] { cancelled = true; });
+    bridge->then(
+        bridge->evaluate(script), [](JSValueRef, bool) { throw std::runtime_error("expired promise settled"); },
+        [&] { cancelled = true; });
     lock = nullptr;
     fixture.view->LoadHTML("<body>new document</body>");
     pump(fixture, [&] { return !context.IsAlive(); });
@@ -219,10 +241,15 @@ void expiry() {
 int main(int argc, char **argv) {
     std::string mode = argc > 1 ? argv[1] : "conveniences";
     return sample::run([&] {
-        if (mode == "conveniences") conveniences();
-        else if (mode == "scaffold") scaffold();
-        else if (mode == "async") async();
-        else if (mode == "expiry") expiry();
-        else throw std::invalid_argument("unknown javascript test case");
+        if (mode == "conveniences")
+            conveniences();
+        else if (mode == "scaffold")
+            scaffold();
+        else if (mode == "async")
+            async();
+        else if (mode == "expiry")
+            expiry();
+        else
+            throw std::invalid_argument("unknown javascript test case");
     });
 }

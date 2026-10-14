@@ -1,4 +1,5 @@
 #include "../common.hpp"
+#include <ulbind17/API.hpp>
 
 int main(int argc, char **argv) {
     return official::Main([&] {
@@ -7,31 +8,12 @@ int main(int argc, char **argv) {
         unsigned ticks = 0;
         bool reloaded = false;
         std::unique_ptr<official::Bridge::Handle> previous;
-        page.bind = [&](auto &bridge) {
-            auto weak = std::weak_ptr(bridge.shared_from_this());
-            bridge.bindFunc("__nativePing", [weak](JSContextRef, JSObjectRef, std::span<const JSValueRef> args) {
-                auto bridge = weak.lock();
-                official::Check(bool(bridge) && args.size() == 1, "ping expects one string");
-                return bridge->makeString("pong: " + bridge->readString(args[0]));
-            });
-            bridge.bindFunc("__nativeIncrement", [weak](JSContextRef, JSObjectRef, std::span<const JSValueRef> args) {
-                auto bridge = weak.lock();
-                official::Check(bool(bridge) && args.size() == 1, "increment expects one number");
-                return bridge->makeNumber(bridge->readNumber(args[0]) + 1);
-            });
-            bridge.evaluateRetained(R"JS(
-                const ticks = new Set();
-                globalThis.__emitTick = value => { for (const callback of ticks) callback(value); };
-                globalThis.app = Object.freeze({
-                    version: '2.0.0-beta.2 / ulbind17',
-                    ping: __nativePing, increment: __nativeIncrement,
-                    on(name, callback) {
-                        if (name !== 'tick' || typeof callback !== 'function') throw new TypeError('Unknown event');
-                        ticks.add(callback); return () => ticks.delete(callback);
-                    }
-                });
-            )JS");
-        };
+        ulbind17::API api("app");
+        api["version"] = "2.0.0-beta.2 / ulbind17";
+        api.Bind("ping", [](std::string message) { return "pong: " + message; });
+        api.Bind("increment", [](double value) { return value + 1; });
+        api.DefineEvent<double>("tick");
+        official::Check(api.AttachTo(page.view), "API attachment failed");
         page.Load("file:///app.html");
         auto start = official::Clock::now(), last_tick = start;
         host.Run(
@@ -39,13 +21,7 @@ int main(int argc, char **argv) {
                 if (!page.ready || official::Clock::now() - last_tick < std::chrono::seconds(1))
                     return;
                 last_tick = official::Clock::now();
-                page.view.WithBridge([&](auto &bridge) {
-                    auto emit = bridge.evaluateRetained("__emitTick");
-                    auto value =
-                        bridge.retain(bridge.makeNumber(std::chrono::duration<double>(last_tick - start).count()));
-                    const official::Bridge::Handle *args[] = {value.get()};
-                    bridge.callRetained(*emit, args);
-                });
+                api.Emit("tick", std::chrono::duration<double>(last_tick - start).count());
                 ++ticks;
             },
             [&] {
@@ -53,8 +29,8 @@ int main(int argc, char **argv) {
                     return false;
                 official::Check(page.Boolean("app.ping('hello') === 'pong: hello' && app.increment(41) === 42"),
                                 "Bridge round trip failed");
-                official::Check(page.String("document.getElementById('uptime').textContent") != "0:00",
-                                "Native tick was not delivered");
+                if (page.String("document.getElementById('uptime').textContent") == "0:00")
+                    return false; // SDK events are delivered during a later update.
                 if (!reloaded) {
                     previous = page.view.WithBridge([](auto &bridge) { return bridge.evaluateRetained("app.ping"); });
                     reloaded = true;

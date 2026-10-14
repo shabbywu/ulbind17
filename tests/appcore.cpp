@@ -5,6 +5,7 @@
 #include <mutex>
 #include <optional>
 #include <thread>
+#include <ulbind17/API.hpp>
 #include <ulbind17/appcore.hpp>
 #include <ulbind17/platform/FileSystem.hpp>
 
@@ -165,6 +166,12 @@ void hosted(std::string_view mode) {
     auto panel = window.AdoptPanel(view);
     check(view.native()->load_listener() == load && view.native()->view_listener() == events,
           "Adoption replaced ManagedView listeners");
+    API api("typed");
+    if (mode == "typed-api") {
+        api.Bind("echo", [](int value) { return value; });
+        api.Bind("close", [&] { window.Close(); });
+        check(api.AttachTo(view), "Typed API attachment failed");
+    }
     auto *editor = view.native()->editor_listener();
     check(editor, "AppCore editor listener is missing");
     expect(ErrorCode::InvalidArgument, [&] { window.AdoptPanel(view); });
@@ -300,6 +307,20 @@ void hosted(std::string_view mode) {
         expect(ErrorCode::PageGone, [&] { old->value(); });
         expect(ErrorCode::Closed, [&] { other.native(); });
         check(!panel->view().get() && !second->view().get(), "Closed Window retained Panels");
+    } else if (mode == "typed-api") {
+        check(view.native()->load_listener() == load && view.native()->view_listener() == events &&
+                  view.native()->editor_listener() == editor,
+              "API attachment replaced a listener");
+        view.LoadHTML("<script>globalThis.answer=typed.echo(43)</script>");
+        pump(app, [&] { return ready > 1; });
+        view.WithBridge([](auto &bridge) {
+            check(bridge.readNumber(bridge.evaluateRetained("answer")->value()) == 43, "Typed API navigation failed");
+        });
+        view.LoadHTML("<script>typed.close()</script>");
+        pump(app, [&] { return !panel->view().get(); });
+        expect(ErrorCode::Closed, [&] { view.native(); });
+        app.Close();
+        return;
     } else if (mode == "navigation") {
         auto old = view.WithBridge([](auto &bridge) { return bridge.evaluateRetained("()=>42"); });
         view.LoadHTML("<script>globalThis.answer=echo(43)</script>");

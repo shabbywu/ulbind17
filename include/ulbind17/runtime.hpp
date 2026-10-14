@@ -1,5 +1,6 @@
 #pragma once
 #include <Ultralight/Ultralight.h>
+#include <Ultralight/js/API.h>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,7 @@
 namespace ulbind17 {
 class Runtime;
 class ManagedView;
+class API;
 namespace appcore_detail {
 struct Access;
 }
@@ -131,6 +133,8 @@ struct ViewState final : ultralight::LoadListener, ultralight::ViewListener, std
     ultralight::RefPtr<ultralight::View> view;
     std::shared_ptr<jsc::Bridge> bridge;
     ViewCallbacks callbacks;
+    // Borrowed SDK refs do not retain an API owning handle.
+    std::vector<ultralight::js::API> attached_apis;
     std::shared_ptr<ViewHost> host;
     bool closed = false;
     std::size_t pixel_locks = 0;
@@ -164,6 +168,9 @@ struct ViewState final : ultralight::LoadListener, ultralight::ViewListener, std
         if (native.get()) {
             native->set_load_listener(nullptr);
             native->set_view_listener(nullptr);
+            auto apis = std::exchange(attached_apis, {});
+            for (auto &api : apis)
+                api.DetachFrom(native.get());
         }
         expire();
         callbacks = {};
@@ -413,6 +420,7 @@ class ManagedView {
     explicit ManagedView(std::shared_ptr<runtime_detail::ViewState> state) : state_(std::move(state)) {
     }
     friend class Runtime;
+    friend class API;
     friend struct appcore_detail::Access;
     template <typename F> void input(F &&callback) const {
         auto state = state_;

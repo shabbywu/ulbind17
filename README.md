@@ -216,7 +216,52 @@ JSC 对 has/keys 钩子没有异常输出槽，这两类钩子应不抛异常；
 
 ## 绑定 C++ 函数和类
 
-`<ulbind17/ulbind17.hpp>` 通过 `ulbind17::js` 暴露官方的类型化 JavaScript 绑定接口。
+`<ulbind17/API.hpp>` 提供独立于 View 的类型化 `ulbind17::API` 注册表，
+复用官方 `js::API` 的函数、常量、类、事件与类型转换。先注册，再附着至一个或多个 ManagedView：
+
+```cpp
+#include <ulbind17/API.hpp>
+#include <ulbind17/setup.hpp>
+
+ulbind17::setup_ultralight_platform();
+auto runtime = ulbind17::Runtime::Create();
+ultralight::ViewConfig config;
+config.is_accelerated = false;
+auto view = runtime.CreateView(800, 450, config);
+ulbind17::API api("app");
+api.Bind("hello", [](std::string who) { return "hello " + who; });
+api["version"] = "example";
+api.DefineEvent<double>("tick");
+if (!api.AttachTo(view))
+    throw std::runtime_error("API attachment failed");
+view.LoadHTML("<body><script>document.body.textContent = app.hello('world')</script>");
+// 宿主持续驱动 Runtime；事件在后续 Update 中交付。
+api.Emit("tick", 1.0);
+```
+
+`API` 是 SDK `js::API` 的值类型适配，不用于通过基类指针管理多态所有权。
+支持 SDK 的 Bind、成员函数、DefineClass、属性、事件、诊断和 AttachOptions；
+`ulbind17::js::API` 仍是原始 SDK 类型。旧 `Bindings` 封装已移除：改用 `API`，
+将 `bindFunc()` 改为 `Bind()`，原 `.api()` 调用直接在 API 上进行。
+
+`AttachTo(ManagedView, options)` 和 `DetachFrom(ManagedView)` 检查 Renderer 线程、关闭状态与像素锁，
+操作期间保活原生对象。ManagedView 关闭时自动解除通过该入口记录的附着，停止后续注入与事件。
+API 的拥有者由调用方保存，ManagedView 的 borrowed handle 不延长拥有者寿命；
+销毁最后一个拥有者后，页面仍保留的函数按 SDK 规则报告 `ULJS_DETACHED`。
+单独 DetachFrom 不撤销当前页面已有的函数，只停止后续注入与事件；这是 SDK 的原有语义。
+
+导航后 SDK 自动重新注入 API，无需在 window_ready 中重新注册；动态 jsc::Bridge 的文档失效规则不变。
+附着不会替换 LoadListener、ViewListener 或 editor listener。
+重复 AttachTo 更新配置。注册在页面加载后发生变化时，当前页面保留旧绑定，下一次导航才使用新注册。
+默认只注入主框架和本地 file:// / LoadHTML 内容，命名空间冻结；
+`js::AllFrames` 开启子框架注入，显式 origin_rules 替换默认来源规则。
+AttachTo 返回成功表示附着配置成功，并不表示当前来源允许注入；初始不透明文档可先附着，再加载实际页面。
+ManagedView 入口的状态错误抛出 `ulbind17::Error`，SDK 的无效 API 或附着配置返回 false。
+API 附着后的注册、分离与销毁在 Renderer 线程执行；Emit 可从工作线程调用。
+数值损失与多余参数的诊断沿用 SDK 规则；需要将其作为调用错误时，使用 `js::Diagnostics::Strict`。
+
+`<ulbind17/ulbind17.hpp>` 同时提供上述适配与原始 SDK 类型化接口。
+直接使用原生 View 时，仍可使用 `ulbind17::js::API`：
 
 ```cpp
 #include <ulbind17/setup.hpp>
@@ -242,7 +287,7 @@ view->LoadHTML("<body><script>document.body.textContent = app.hello('world')</sc
 页面使用这些绑定期间，必须保持 `api` 及回调捕获的 C++ 对象存活。
 在宿主循环中调用 `RefreshDisplay(0)`、`Update()` 和 `Render()`。
 新建 View 的初始文档具有不透明来源，默认来源策略不会向其中注入绑定；
-需要先加载自己的 HTML 或本地页面。应在加载实际 UI 前绑定 API，页面导航后会重新注入绑定。
+可以先附着 API，再加载自己的 HTML 或本地页面；页面导航后会重新注入绑定。
 向远程页面绑定 API 时，应显式配置允许的来源规则。
 
 操作页面时，在页面就绪后创建 `js::Context(view.get())`。
